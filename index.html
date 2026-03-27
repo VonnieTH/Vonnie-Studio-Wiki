@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vonnie Company</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;1,300&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg-deep:    #141420;
+  --bg-mid:     #1c1c2e;
+  --bg-card:    #22223a;
+  --bg-header:  #2a1f4e;
+  --purple-bright: #9b6dff;
+  --purple-mid: #7c4dcc;
+  --purple-dim: #3d2b6b;
+  --purple-border: #4a3580;
+  --accent-gold: #f0c040;
+  --accent-teal: #40d4c0;
+  --text-primary: #e8e6f0;
+  --text-secondary: #a09ab8;
+  --text-dim: #6a6480;
+  --border: rgba(155,109,255,0.18);
+  --display: "Rajdhani", sans-serif;
+  --body: "Source Sans 3", sans-serif;
+}
+body { background: var(--bg-deep); color: var(--text-primary); font-family: var(--body); font-size: 15px; line-height: 1.65; min-height: 100vh; }
+
+.topnav { background: var(--bg-mid); border-bottom: 1px solid var(--border); padding: 0 20px; display: flex; align-items: center; height: 52px; position: sticky; top: 0; z-index: 100; }
+.topnav-logo { font-family: var(--display); font-size: 20px; font-weight: 700; color: var(--purple-bright); margin-right: 28px; letter-spacing: .02em; white-space: nowrap; }
+.topnav-logo span { color: var(--accent-gold); }
+.topnav-links { display: flex; flex: 1; }
+.nav-tab { font-family: var(--display); font-size: 14px; font-weight: 600; color: var(--text-secondary); padding: 0 14px; height: 52px; display: flex; align-items: center; border-bottom: 3px solid transparent; cursor: pointer; letter-spacing: .04em; text-transform: uppercase; transition: color .15s, border-color .15s; text-decoration: none; }
+.nav-tab:hover { color: var(--text-primary); }
+.nav-tab.active { color: var(--purple-bright); border-bottom-color: var(--purple-bright); }
+.topnav-search { display: flex; align-items: center; background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px; gap: 8px; font-size: 13px; color: var(--text-dim); }
+
+.layout { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 52px); }
+
+.sidebar { background: var(--bg-mid); border-right: 1px solid var(--border); padding: 24px 16px; position: sticky; top: 52px; height: calc(100vh - 52px); overflow-y: auto; display: flex; flex-direction: column; gap: 24px; }
+.sidebar-avatar { display: flex; flex-direction: column; align-items: center; gap: 10px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+.avatar-ring { width: 72px; height: 72px; border-radius: 50%; background: var(--purple-dim); border: 2px solid var(--purple-bright); display: flex; align-items: center; justify-content: center; font-family: var(--display); font-size: 28px; font-weight: 700; color: var(--purple-bright); }
+.sidebar-name-text { font-family: var(--display); font-size: 17px; font-weight: 700; color: var(--text-primary); text-align: center; letter-spacing: .03em; }
+.sidebar-role { font-size: 12px; color: var(--text-secondary); text-align: center; }
+.sidebar-section-label { font-family: var(--display); font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; }
+.sidebar-nav { display: flex; flex-direction: column; gap: 1px; }
+.sidebar-link { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 6px; font-size: 13px; color: var(--text-secondary); cursor: pointer; text-decoration: none; transition: background .12s, color .12s; }
+.sidebar-link:hover { background: rgba(155,109,255,.1); color: var(--text-primary); }
+.sidebar-link.active { background: rgba(155,109,255,.18); color: var(--purple-bright); font-weight: 600; }
+.sidebar-link-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.sidebar-stats { margin-top: auto; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+.stat-row { display: flex; justify-content: space-between; font-size: 12px; padding: 3px 0; }
+.stat-label { color: var(--text-dim); }
+.stat-val { color: var(--purple-bright); font-weight: 600; font-family: var(--display); }
+
+.main { padding: 28px 36px; max-width: 900px; }
+.page-header { border-bottom: 2px solid var(--purple-mid); padding-bottom: 10px; margin-bottom: 28px; display: flex; align-items: baseline; gap: 16px; }
+.page-title { font-family: var(--display); font-size: 38px; font-weight: 700; letter-spacing: .03em; }
+.page-actions { margin-left: auto; display: flex; gap: 8px; }
+.page-btn { font-family: var(--display); font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; padding: 5px 14px; border-radius: 4px; border: 1px solid var(--purple-border); background: transparent; color: var(--text-secondary); cursor: pointer; transition: background .12s; }
+.page-btn:hover { background: rgba(155,109,255,.15); color: var(--text-primary); }
+
+.welcome-banner { background: var(--bg-header); border: 1px solid var(--purple-border); border-top: 3px solid var(--purple-bright); border-radius: 8px; padding: 24px 28px; margin-bottom: 20px; text-align: center; }
+.banner-label { font-size: 13px; color: var(--text-dim); margin-bottom: 10px; }
+.banner-title { font-family: var(--display); font-size: 26px; font-weight: 700; letter-spacing: .05em; margin-bottom: 12px; }
+.banner-title span { color: var(--purple-bright); }
+.banner-stats { display: flex; justify-content: center; gap: 28px; font-size: 13px; color: var(--text-secondary); }
+.banner-stat strong { color: var(--accent-gold); font-family: var(--display); font-size: 15px; }
+
+.grid-2 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 20px; }
+.grid-equal { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+
+.wiki-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.wiki-card-header { background: var(--bg-header); border-bottom: 1px solid var(--purple-border); padding: 8px 16px; font-family: var(--display); font-size: 14px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-primary); }
+.wiki-card-body { padding: 16px; }
+
+.about-text { font-size: 14px; font-weight: 300; color: var(--text-secondary); line-height: 1.75; margin-bottom: 14px; }
+.tag-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.wiki-tag { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 3px; font-family: var(--display); letter-spacing: .06em; text-transform: uppercase; }
+.tag-purple { background: rgba(155,109,255,.18); color: var(--purple-bright); }
+.tag-gold { background: rgba(240,192,64,.15); color: var(--accent-gold); }
+.tag-teal { background: rgba(64,212,192,.15); color: var(--accent-teal); }
+
+.info-row { display: flex; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,.04); font-size: 13px; }
+.info-row:last-child { border-bottom: none; }
+.info-key { color: var(--text-dim); min-width: 72px; flex-shrink: 0; }
+.info-val { color: var(--text-primary); }
+.info-val.highlight { color: var(--purple-bright); }
+
+.project-entry { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.05); cursor: pointer; transition: all .1s; }
+.project-entry:last-child { border-bottom: none; }
+.project-entry:hover { background: rgba(155,109,255,.06); margin: 0 -16px; padding: 10px 16px; border-radius: 4px; }
+.project-num { font-family: var(--display); font-size: 20px; font-weight: 700; color: var(--purple-dim); min-width: 28px; line-height: 1.1; }
+.project-info { flex: 1; }
+.project-name { font-family: var(--display); font-size: 15px; font-weight: 700; letter-spacing: .03em; margin-bottom: 2px; }
+.project-desc { font-size: 12px; color: var(--text-secondary); font-weight: 300; line-height: 1.5; }
+.project-badge { font-size: 10px; font-weight: 600; font-family: var(--display); letter-spacing: .08em; text-transform: uppercase; padding: 2px 8px; border-radius: 3px; align-self: flex-start; white-space: nowrap; }
+.badge-live { background: rgba(64,212,192,.2); color: var(--accent-teal); }
+.badge-wip { background: rgba(240,192,64,.15); color: var(--accent-gold); }
+
+.skill-group { margin-bottom: 14px; }
+.skill-group:last-child { margin-bottom: 0; }
+.skill-group-name { font-family: var(--display); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--purple-bright); margin-bottom: 7px; }
+.skill-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.skill-chip { font-size: 12px; padding: 3px 10px; border-radius: 3px; border: 1px solid var(--purple-border); background: rgba(155,109,255,.06); color: var(--text-secondary); }
+
+.social-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.04); font-size: 13px; }
+.social-row:last-child { border-bottom: none; }
+.social-icon { width: 28px; height: 28px; border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.social-name { color: var(--text-primary); flex: 1; }
+.social-handle { font-size: 12px; color: var(--purple-bright); }
+
+.wiki-footer { border-top: 1px solid var(--border); padding: 16px 36px; font-size: 12px; color: var(--text-dim); display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <span class="topnav-logo">Vonnie<span>Company</span> Wiki</span>
+  <div class="topnav-links">
+    <a class="nav-tab active" href="#">Home</a>
+    <a class="nav-tab" href="#">About Me</a>
+    <a class="nav-tab" href="#">Projects</a>
+    <a class="nav-tab" href="#">Skills</a>
+    <a class="nav-tab" href="#">Blog</a>
+  </div>
+  <div class="topnav-search">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    Search wiki...
+  </div>
+</nav>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-avatar">
+      <div class="avatar-ring">:P</div>
+      <p class="sidebar-name-text">Vonnie Ellipse</p>
+      <p class="sidebar-role">CS Student · Builder</p>
+    </div>
+    <div>
+      <p class="sidebar-section-label">Navigation</p>
+      <nav class="sidebar-nav">
+        <a class="sidebar-link active" href="#"><span class="sidebar-link-dot" style="background:#9b6dff"></span>Home</a>
+        <a class="sidebar-link" href="#"><span class="sidebar-link-dot" style="background:#f0c040"></span>About Me</a>
+        <a class="sidebar-link" href="#"><span class="sidebar-link-dot" style="background:#40d4c0"></span>Projects</a>
+        <a class="sidebar-link" href="#"><span class="sidebar-link-dot" style="background:#9b6dff"></span>Skills</a>
+        <a class="sidebar-link" href="#"><span class="sidebar-link-dot" style="background:#ff7eb6"></span>Blog</a>
+        <a class="sidebar-link" href="#"><span class="sidebar-link-dot" style="background:#888"></span>Contact</a>
+      </nav>
+    </div>
+    <div class="sidebar-stats">
+      <p class="sidebar-section-label" style="margin-bottom:8px">Wiki stats</p>
+      <div class="stat-row"><span class="stat-label">Projects</span><span class="stat-val">1</span></div>
+      <div class="stat-row"><span class="stat-label">Last updated</span><span class="stat-val">Mar 2026</span></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-header">
+      <h1 class="page-title">HOME</h1>
+      <div class="page-actions">
+        <button class="page-btn">Share</button>
+      </div>
+    </div>
+
+    <div class="welcome-banner">
+      <p class="banner-label">Welcome to the</p>
+      <h2 class="banner-title">Vonnie<span>Company</span> Personal Wiki</h2>
+      <div class="banner-stats">
+        <span><strong>1</strong> projects</span>
+        <span><strong>2</strong> sections</span>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="wiki-card">
+        <div class="wiki-card-header">About Me</div>
+        <div class="wiki-card-body">
+          <p class="about-text">I'm a computer engineering student currently learning web development, machine learning, system creation and security</p>
+          <div class="tag-row">
+            <span class="wiki-tag tag-purple">React</span>
+            <span class="wiki-tag tag-purple">Python</span>
+            <span class="wiki-tag tag-gold">Machine Learning</span>
+            <span class="wiki-tag tag-teal">UI/UX</span>
+          </div>
+        </div>
+      </div>
+      <div class="wiki-card">
+        <div class="wiki-card-header">Quick Info</div>
+        <div class="wiki-card-body">
+          <div class="info-row"><span class="info-key">Name</span><span class="info-val highlight">Vonnie Ellipse</span></div>
+          <div class="info-row"><span class="info-key">Role</span><span class="info-val">CS Student</span></div>
+          <div class="info-row"><span class="info-key">Location</span><span class="info-val">Thailand</span></div>
+          <div class="info-row"><span class="info-key">Focus</span><span class="info-val">Full-Stack, ML</span></div>
+          <div class="info-row"><span class="info-key">GitHub</span><span class="info-val highlight">@VonnieTH</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-equal">
+      <div class="wiki-card">
+        <div class="wiki-card-header">Projects</div>
+        <div class="wiki-card-body">
+          <div class="project-entry">
+            <span class="project-num">01</span>
+            <div class="project-info">
+              <p class="project-name">This Wiki</p>
+              <p class="project-desc">HTML/CSS · Personal wiki</p>
+            </div>
+            <span class="project-badge badge-wip">WIP</span>
+          </div>
+        </div>
+      </div>
+      <div class="wiki-card">
+        <div class="wiki-card-header">Skills</div>
+        <div class="wiki-card-body">
+          <div class="skill-group">
+            <p class="skill-group-name">Frontend</p>
+            <div class="skill-chips">
+              <span class="skill-chip">React</span><span class="skill-chip">TypeScript</span><span class="skill-chip">Tailwind</span><span class="skill-chip">Vite</span>
+            </div>
+          </div>
+          <div class="skill-group">
+            <p class="skill-group-name">Backend / Data</p>
+            <div class="skill-chips">
+              <span class="skill-chip">Python</span><span class="skill-chip">FastAPI</span><span class="skill-chip">Pandas</span><span class="skill-chip">SQL</span>
+            </div>
+          </div>
+          <div class="skill-group">
+            <p class="skill-group-name">Tools</p>
+            <div class="skill-chips">
+              <span class="skill-chip">Git</span><span class="skill-chip">Figma</span><span class="skill-chip">VS Code</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="wiki-card" style="margin-bottom:20px">
+      <div class="wiki-card-header">Socials &amp; Contact</div>
+      <div class="wiki-card-body" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 24px">
+        <div class="social-row">
+          <div class="social-icon" style="background:rgba(36,41,46,.6)"><svg width="16" height="16" fill="#ccc" viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.605-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg></div>
+          <span class="social-name">GitHub</span>
+          <span class="social-handle">@VonnieTH</span>
+        </div>
+        <div class="social-row">
+          <div class="social-icon" style="background:rgba(155,109,255,.2)"><svg width="16" height="16" fill="none" stroke="#9b6dff" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
+          <span class="social-name">Email</span>
+          <span class="social-handle">mcheuxchang@gmail.com</span>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<footer class="wiki-footer">
+  <span>Vonnie Wiki · Company</span>
+  <span>Last edited: March 2026</span>
+</footer>
+
+</body>
+</html>
