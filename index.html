@@ -431,8 +431,7 @@ body {
 .share-modal-header {
   background: rgba(0,212,255,.07);
   border-bottom: 1px solid rgba(0,212,255,.3);
-  padding: 8px 16px;
-  font-family: var(--mono); font-size: 10px;
+  padding: 8px 16px; font-family: var(--mono); font-size: 10px;
   letter-spacing: .14em; color: var(--cyan);
   display: flex; justify-content: space-between; align-items: center;
 }
@@ -446,12 +445,9 @@ body {
 .share-url-box {
   font-family: var(--mono); font-size: 10px; color: var(--cyan);
   background: rgba(0,212,255,.05); border: 1px solid rgba(0,212,255,.2);
-  padding: 8px 12px; word-break: break-all; letter-spacing: .02em;
+  padding: 8px 12px; word-break: break-all;
 }
-.share-label {
-  font-family: var(--mono); font-size: 9px;
-  color: var(--text-sub); letter-spacing: .1em;
-}
+.share-label { font-family: var(--mono); font-size: 9px; color: var(--text-sub); letter-spacing: .1em; }
 .share-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
 .share-btn {
   display: flex; align-items: center; gap: 10px;
@@ -461,20 +457,16 @@ body {
 }
 .share-btn:hover { padding-left: 18px; }
 .share-btn i { font-size: 13px; width: 16px; text-align: center; }
-.share-btn-copy    { border-color: rgba(0,212,255,.3); color: var(--cyan); }
+.share-btn-copy   { border-color: rgba(0,212,255,.3); color: var(--cyan); }
 .share-btn-copy:hover { background: rgba(0,212,255,.08); border-color: var(--cyan); }
-.share-btn-x       { border-color: rgba(255,255,255,.2); color: var(--text-main); }
+.share-btn-x      { border-color: rgba(255,255,255,.2); color: var(--text-main); }
 .share-btn-x:hover { background: rgba(255,255,255,.05); border-color: var(--text-main); }
-.share-btn-fb      { border-color: rgba(24,119,242,.4); color: #4a9eff; }
-.share-btn-fb:hover { background: rgba(24,119,242,.08); border-color: #4a9eff; }
-.share-btn-native  { border-color: rgba(64,255,128,.3); color: var(--green); }
+.share-btn-native { border-color: rgba(64,255,128,.3); color: var(--green); }
 .share-btn-native:hover { background: rgba(64,255,128,.06); border-color: var(--green); }
 .share-toast {
   font-family: var(--mono); font-size: 9px; letter-spacing: .1em;
   color: var(--green); text-align: center; height: 16px;
-  transition: opacity .3s;
 }
-
 </style>
 </head>
 <body>
@@ -499,9 +491,6 @@ body {
   </div>
 </div>
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
-  <div class="loader-sub">Initializing database...</div>
-  <div class="loader-bar-wrap"><div class="loader-bar"></div></div>
-  <div class="loader-pct" id="loader-pct">0%</div>
 </div>
 
 <div id="app">
@@ -675,78 +664,44 @@ body {
 
   function setBar(v) { bar.style.width = v + '%'; pct.textContent = v + '%'; }
 
-  // collect real browser data
-  var info = {
-    'Browser':     navigator.userAgent.split(' ').pop().split('/')[0] || 'Unknown',
-    'CPU Cores':   (navigator.hardwareConcurrency || '?') + ' logical cores',
-    'RAM':         (navigator.deviceMemory ? navigator.deviceMemory + ' GB (approx)' : 'N/A'),
-    'Resolution':  screen.width + 'x' + screen.height,
-    'Timezone':    Intl.DateTimeFormat().resolvedOptions().timeZone,
-    'Language':    navigator.language,
-    'Network':     (navigator.connection ? navigator.connection.effectiveType || '?' : 'N/A'),
-    'Platform':    navigator.platform || 'Unknown'
-  };
-
-  var keys = Object.keys(info);
+  // anonymous security scan - no user data shown
+  var scanSteps = [
+    'Checking system integrity',
+    'Scanning memory segments',
+    'Verifying kernel modules',
+    'Analyzing network signatures',
+    'Running antivirus engine',
+    'Checking browser environment',
+    'Validating session tokens',
+    'Finalizing security check'
+  ];
   var i = 0;
 
-  function addRow(label, value, cb) {
-    var row  = document.createElement('div'); row.className = 'ld-scan-row';
-    var dot  = document.createElement('div'); dot.className = 'ld-scan-dot';
-    var lbl  = document.createElement('span'); lbl.className = 'ld-scan-label'; lbl.textContent = '[SCAN] ' + label + '...';
-    var val  = document.createElement('span'); val.className = 'ld-scan-val'; val.textContent = '';
+  function addRow(label, cb) {
+    var row = document.createElement('div'); row.className = 'ld-scan-row';
+    var dot = document.createElement('div'); dot.className = 'ld-scan-dot';
+    var lbl = document.createElement('span'); lbl.className = 'ld-scan-label'; lbl.textContent = '[SCAN] ' + label + '...';
+    var val = document.createElement('span'); val.className = 'ld-scan-val'; val.textContent = '';
     row.appendChild(dot); row.appendChild(lbl); row.appendChild(val);
     rows.appendChild(row);
-    // reveal value after short delay
     setTimeout(function() {
-      val.textContent = value;
       dot.classList.add('ok');
       lbl.textContent = '[OK]   ' + label;
+      val.textContent = 'CLEAR';
       if (cb) cb();
-    }, 350);
+    }, 360);
   }
 
   function scanNext() {
-    if (i >= keys.length) {
+    if (i >= scanSteps.length) {
       setBar(85);
       setTimeout(showCaptcha, 400);
       return;
     }
-    var key = keys[i]; i++;
-    setBar(Math.round((i / keys.length) * 80));
-    addRow(key, info[key], function() { setTimeout(scanNext, 180); });
+    setBar(Math.round((i / scanSteps.length) * 80));
+    addRow(scanSteps[i], function() { setTimeout(scanNext, 150); });
+    i++;
   }
-
-  function showCaptcha() {
-    var box = document.getElementById('ld-captcha');
-    box.classList.add('show');
-    // render reCAPTCHA
-    if (window.grecaptcha) {
-      renderCaptcha();
-    } else {
-      // wait for script to load
-      var checkGr = setInterval(function() {
-        if (window.grecaptcha) { clearInterval(checkGr); renderCaptcha(); }
-      }, 200);
-    }
-  }
-
-  function renderCaptcha() {
-    grecaptcha.render('recaptcha-box', {
-      sitekey: '6LdEz58sAAAAAKArp6E4icYsTU7kfLsgHilK32cN',
-      theme: 'dark',
-      callback: onCaptchaPass
-      
-    });
-  }
-
-  window.onCaptchaPass = function() {
-    setBar(100);
-    setTimeout(function() {
-      document.getElementById('loader').classList.add('hidden');
-      document.getElementById('app').classList.add('visible');
-    }, 600);
-  };
 
   setTimeout(scanNext, 400);
 })();
@@ -769,7 +724,6 @@ document.addEventListener('keydown', function(e) {
 function openShare() {
   var url = window.location.href;
   document.getElementById('share-url-display').textContent = url;
-  // hide native btn if not supported
   if (!navigator.share) document.getElementById('share-native-btn').style.display = 'none';
   document.getElementById('share-modal').classList.add('open');
 }
@@ -779,7 +733,6 @@ function closeShare() {
 }
 function shareAction(type) {
   var url = window.location.href;
-  var title = 'VonnieCompany Wiki';
   var toast = document.getElementById('share-toast');
   if (type === 'copy') {
     navigator.clipboard.writeText(url).then(function() {
@@ -787,44 +740,11 @@ function shareAction(type) {
       setTimeout(function(){ toast.textContent = ''; }, 2500);
     });
   } else if (type === 'x') {
-    window.open('https://x.com/intent/tweet?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(title), '_blank');
-  } else if (type === 'fb') {
-    window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url), '_blank');
+    window.open('https://x.com/intent/tweet?url=' + encodeURIComponent(url) + '&text=VonnieCompany+Wiki', '_blank');
   } else if (type === 'native') {
-    if (navigator.share) navigator.share({ title: title, url: url });
+    if (navigator.share) navigator.share({ title: 'VonnieCompany Wiki', url: url });
   }
 }
 </script>
-
-<!-- SHARE MODAL -->
-<div id="share-modal" class="share-modal-overlay" onclick="if(event.target===this)closeShare()">
-  <div class="share-modal-box">
-    <div class="share-modal-header">
-      <span>// SHARE_PAGE.EXE</span>
-      <button class="share-modal-close" onclick="closeShare()">[ X ]</button>
-    </div>
-    <div class="share-modal-body">
-      <div class="share-label">PAGE URL</div>
-      <div class="share-url-box" id="share-url-display"></div>
-      <div class="share-label" style="margin-top:4px;">SHARE VIA</div>
-      <div class="share-actions">
-        <button class="share-btn share-btn-copy" onclick="shareAction('copy')">
-          <i class="fa-solid fa-copy"></i>[ COPY URL ]
-        </button>
-        <button class="share-btn share-btn-x" onclick="shareAction('x')">
-          <i class="fa-brands fa-x-twitter"></i>[ SHARE ON X ]
-        </button>
-        <button class="share-btn share-btn-fb" onclick="shareAction('fb')">
-          <i class="fa-brands fa-facebook"></i>[ SHARE ON FACEBOOK ]
-        </button>
-        <button class="share-btn share-btn-native" onclick="shareAction('native')" id="share-native-btn">
-          <i class="fa-solid fa-share-nodes"></i>[ SHARE (DEVICE) ]
-        </button>
-      </div>
-      <div class="share-toast" id="share-toast"></div>
-    </div>
-  </div>
-</div>
-
 </body>
 </html>
