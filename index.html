@@ -67,7 +67,7 @@ body {
 
 @keyframes fadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
 @keyframes blink  { 0%,100%{opacity:1} 50%{opacity:0} }
-@keyframes scanLine { 0%{top:-2px} 100%{top:100%} }
+@keyframes scanPulse { 0%,100%{opacity:.4} 50%{opacity:1} }
 
 .ld-window {
   width: 480px; max-width: 92vw;
@@ -86,45 +86,36 @@ body {
 .ld-titlebar {
   background: rgba(0,212,255,.1);
   border-bottom: 1px solid rgba(0,212,255,.3);
-  padding: 6px 14px;
-  font-family: var(--mono); font-size: 10px;
+  padding: 6px 14px; font-family: var(--mono); font-size: 10px;
   color: var(--cyan); letter-spacing: .14em;
   display: flex; justify-content: space-between;
 }
 .ld-body { padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; }
-.ld-scan-area {
-  position: relative; height: 6px; overflow: hidden;
-  background: rgba(0,212,255,.06); border: 1px solid rgba(0,212,255,.2);
+
+/* scan rows */
+.ld-scan-rows { display: flex; flex-direction: column; gap: 6px; }
+.ld-scan-row  { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 10px; }
+.ld-scan-label { color: var(--text-dim); flex: 1; }
+.ld-scan-val   { color: var(--cyan); min-width: 120px; text-align: right; font-size: 9px; }
+.ld-scan-dot   { width:6px; height:6px; border-radius:50%; background:var(--gold); animation:blink .6s infinite; flex-shrink:0; }
+.ld-scan-dot.ok { background:var(--green); animation:none; }
+
+/* progress */
+.ld-bar-row  { display: flex; align-items: center; gap: 10px; }
+.ld-bar-wrap { flex:1; height:4px; background:rgba(0,212,255,.1); border:1px solid rgba(0,212,255,.3); }
+.ld-bar-fill { height:100%; width:0; background:var(--cyan); box-shadow:0 0 6px var(--cyan); transition:width .2s ease; }
+.ld-pct      { font-family:var(--mono); font-size:10px; color:var(--cyan); min-width:32px; text-align:right; }
+
+/* captcha box */
+.ld-captcha-wrap {
+  display: none; flex-direction: column; gap: 10px;
+  border: 1px solid rgba(0,212,255,.25);
+  background: rgba(0,212,255,.04); padding: 14px;
+  animation: fadeUp .3s ease both;
 }
-.ld-scan-beam {
-  position: absolute; left: 0; right: 0; height: 2px;
-  background: var(--cyan); box-shadow: 0 0 8px var(--cyan);
-  animation: scanLine 1.1s linear infinite;
-}
-.ld-log {
-  font-family: var(--mono); font-size: 10px;
-  color: var(--text-dim); line-height: 1.9; min-height: 130px;
-  overflow: hidden;
-}
-.ld-log .ok   { color: var(--green); }
-.ld-log .warn { color: var(--gold); }
-.ld-log .hi   { color: var(--cyan); }
-.ld-bar-row   { display: flex; align-items: center; gap: 10px; }
-.ld-bar-wrap  { flex:1; height:4px; background:rgba(0,212,255,.1); border:1px solid rgba(0,212,255,.3); }
-.ld-bar-fill  { height:100%; width:0; background:var(--cyan); box-shadow:0 0 6px var(--cyan); transition:width .15s ease; }
-.ld-pct       { font-family:var(--mono); font-size:10px; color:var(--cyan); min-width:32px; text-align:right; }
-.ld-verify {
-  border: 1px solid rgba(0,212,255,.25); background: rgba(0,212,255,.04);
-  padding: 10px 14px; font-family: var(--mono); font-size: 10px;
-  display: flex; align-items: center; gap: 10px;
-}
-.ld-verify-dot {
-  width: 12px; height: 12px; border-radius: 50%;
-  background: var(--gold); box-shadow: 0 0 8px var(--gold);
-  animation: blink .7s ease infinite; flex-shrink: 0;
-}
-.ld-verify-dot.pass { background:var(--green); box-shadow:0 0 8px var(--green); animation:none; }
-.ld-vstatus { color: var(--text-sub); } to{opacity:1;transform:none} 
+.ld-captcha-wrap.show { display: flex; }
+.ld-captcha-label { font-family:var(--mono); font-size:10px; color:var(--text-sub); letter-spacing:.08em; }
+.ld-captcha-label span { color:var(--cyan); } to{opacity:1;transform:none} 
 
 #app { opacity: 0; transition: opacity .5s ease; }
 #app.visible { opacity: 1; }
@@ -427,18 +418,22 @@ body {
       <span id="ld-time">00:00</span>
     </div>
     <div class="ld-body">
-      <div class="ld-scan-area"><div class="ld-scan-beam"></div></div>
-      <div class="ld-log" id="ld-log"></div>
+      <div class="ld-scan-rows" id="ld-scan-rows"></div>
       <div class="ld-bar-row">
         <div class="ld-bar-wrap"><div class="ld-bar-fill" id="ld-bar"></div></div>
         <div class="ld-pct" id="ld-pct">0%</div>
       </div>
-      <div class="ld-verify">
-        <div class="ld-verify-dot" id="ld-dot"></div>
-        <span class="ld-vstatus" id="ld-vstatus">Verifying: checking system identity...</span>
+      <div class="ld-captcha-wrap" id="ld-captcha">
+        <div class="ld-captcha-label">// <span>IDENTITY VERIFICATION REQUIRED</span> — Confirm that you are not a bot</div>
+        <div id="recaptcha-box"></div>
       </div>
     </div>
   </div>
+</div>
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+  <div class="loader-sub">Initializing database...</div>
+  <div class="loader-bar-wrap"><div class="loader-bar"></div></div>
+  <div class="loader-pct" id="loader-pct">0%</div>
 </div>
 
 <div id="app">
@@ -458,7 +453,7 @@ body {
     <div class="drawer-stat-row"><span class="drawer-stat-key">status</span><span class="drawer-stat-val" style="color:var(--green)">active</span></div>
     <div class="drawer-stat-row"><span class="drawer-stat-key">updated</span><span class="drawer-stat-val">mar.2026</span></div>
   </div>
-  <div class="drawer-footer">// vonniecompany_wiki v.Beta</div>
+  <div class="drawer-footer">// vonniecompany_wiki v1.0</div>
 </aside>
 
 <nav class="topnav">
@@ -522,7 +517,7 @@ body {
         <div class="project-entry">
           <span class="proj-num">01</span>
           <div class="proj-info">
-            <p class="proj-name">Wiki</p>
+            <p class="proj-name">This Wiki</p>
             <p class="proj-desc">HTML/CSS · Personal wiki</p>
           </div>
           <span class="proj-badge badge-wip">WIP</span>
@@ -574,7 +569,7 @@ body {
   <!-- LINK CONFIRM MODAL -->
   <div id="link-modal" class="link-modal-overlay" onclick="if(event.target===this)closeModal()">
     <div class="link-modal-box">
-      <div class="link-modal-header">// LINK_VERIFY</div>
+      <div class="link-modal-header">// LINK_VERIFY.EXE</div>
       <div class="link-modal-body">
         <div class="link-modal-label">Open link to <span id="modal-name"></span></div>
         <div class="link-modal-url" id="modal-url"></div>
@@ -598,67 +593,93 @@ body {
 </div>
 <script>
 (function() {
-  var log     = document.getElementById('ld-log');
   var bar     = document.getElementById('ld-bar');
   var pct     = document.getElementById('ld-pct');
-  var dot     = document.getElementById('ld-dot');
-  var vstatus = document.getElementById('ld-vstatus');
+  var rows    = document.getElementById('ld-scan-rows');
   var timeel  = document.getElementById('ld-time');
   var started = Date.now();
 
+  // clock
   setInterval(function() {
     var s = ((Date.now() - started) / 1000) | 0;
     timeel.textContent = String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
   }, 500);
 
-  function addLog(msg, cls) {
-    var line = document.createElement('div');
-    if (cls) line.className = cls;
-    line.textContent = msg;
-    log.appendChild(line);
-    log.scrollTop = log.scrollHeight;
-  }
   function setBar(v) { bar.style.width = v + '%'; pct.textContent = v + '%'; }
 
-  var steps = [
-    [300,  function(n){ addLog('> VONNIECOMPANY_WIKI.EXE v1.0  initializing...','hi'); setBar(5); n(); }],
-    [450,  function(n){ addLog('  [SCAN] Loading kernel modules...',''); n(); }],
-    [500,  function(n){ addLog('  [SCAN] Checking system files...',''); setBar(15); n(); }],
-    [550,  function(n){ addLog('  [OK]   No threats detected in /core','ok'); n(); }],
-    [400,  function(n){ addLog('  [SCAN] Scanning memory segments...',''); setBar(28); n(); }],
-    [600,  function(n){ addLog('  [OK]   Memory: CLEAN','ok'); n(); }],
-    [400,  function(n){ addLog('  [SCAN] Checking network signatures...',''); setBar(40); n(); }],
-    [650,  function(n){ addLog('  [WARN] Unusual pattern detected  analyzing...','warn'); n(); }],
-    [800,  function(n){ addLog('  [OK]   False positive  signature cleared','ok'); setBar(55); n(); }],
-    [450,  function(n){ addLog('  [SCAN] Running antivirus deep scan...',''); n(); }],
-    [900,  function(n){ addLog('  [OK]   0 viruses found. System CLEAN.','ok'); setBar(70); n(); }],
-    [500,  function(n){ addLog('  [AUTH] Initiating identity verification...','hi'); n(); }],
-    [600,  function(n){ vstatus.textContent = 'Analyzing behavioral patterns...'; n(); }],
-    [700,  function(n){ vstatus.textContent = 'Checking input entropy & timing...'; setBar(80); n(); }],
-    [600,  function(n){ vstatus.textContent = 'Validating human interaction score...'; n(); }],
-    [800,  function(n){
-      dot.classList.add('pass');
-      vstatus.textContent = 'VERIFIED  Not a bot. Human confirmed.';
-      vstatus.style.color = 'var(--green)';
-      setBar(90);
-      n();
-    }],
-    [500,  function(n){ addLog('  [OK]   Identity: HUMAN','ok'); setBar(95); n(); }],
-    [400,  function(n){ addLog('  [SYS]  Mounting wiki database...',''); n(); }],
-    [600,  function(n){ addLog('  [OK]   All systems nominal. Launching...','ok'); setBar(100); n(); }],
-    [800,  function(n){
+  // collect real browser data
+  var info = {
+    'Browser':     navigator.userAgent.split(' ').pop().split('/')[0] || 'Unknown',
+    'CPU Cores':   (navigator.hardwareConcurrency || '?') + ' logical cores',
+    'RAM':         (navigator.deviceMemory ? navigator.deviceMemory + ' GB (approx)' : 'N/A'),
+    'Resolution':  screen.width + 'x' + screen.height,
+    'Timezone':    Intl.DateTimeFormat().resolvedOptions().timeZone,
+    'Language':    navigator.language,
+    'Network':     (navigator.connection ? navigator.connection.effectiveType || '?' : 'N/A'),
+    'Platform':    navigator.platform || 'Unknown'
+  };
+
+  var keys = Object.keys(info);
+  var i = 0;
+
+  function addRow(label, value, cb) {
+    var row  = document.createElement('div'); row.className = 'ld-scan-row';
+    var dot  = document.createElement('div'); dot.className = 'ld-scan-dot';
+    var lbl  = document.createElement('span'); lbl.className = 'ld-scan-label'; lbl.textContent = '[SCAN] ' + label + '...';
+    var val  = document.createElement('span'); val.className = 'ld-scan-val'; val.textContent = '';
+    row.appendChild(dot); row.appendChild(lbl); row.appendChild(val);
+    rows.appendChild(row);
+    // reveal value after short delay
+    setTimeout(function() {
+      val.textContent = value;
+      dot.classList.add('ok');
+      lbl.textContent = '[OK]   ' + label;
+      if (cb) cb();
+    }, 350);
+  }
+
+  function scanNext() {
+    if (i >= keys.length) {
+      setBar(85);
+      setTimeout(showCaptcha, 400);
+      return;
+    }
+    var key = keys[i]; i++;
+    setBar(Math.round((i / keys.length) * 80));
+    addRow(key, info[key], function() { setTimeout(scanNext, 180); });
+  }
+
+  function showCaptcha() {
+    var box = document.getElementById('ld-captcha');
+    box.classList.add('show');
+    // render reCAPTCHA
+    if (window.grecaptcha) {
+      renderCaptcha();
+    } else {
+      // wait for script to load
+      var checkGr = setInterval(function() {
+        if (window.grecaptcha) { clearInterval(checkGr); renderCaptcha(); }
+      }, 200);
+    }
+  }
+
+  function renderCaptcha() {
+    grecaptcha.render('recaptcha-box', {
+      sitekey: '6LdEz58sAAAAAKArp6E4icYsTU7kfLsgHiIK32cN',
+      theme: 'dark',
+      callback: onCaptchaPass
+    });
+  }
+
+  window.onCaptchaPass = function() {
+    setBar(100);
+    setTimeout(function() {
       document.getElementById('loader').classList.add('hidden');
       document.getElementById('app').classList.add('visible');
-      n();
-    }]
-  ];
-  var i = 0;
-  function run() {
-    if (i >= steps.length) return;
-    var d = steps[i][0], fn = steps[i][1]; i++;
-    setTimeout(function(){ fn(run); }, d);
-  }
-  setTimeout(run, 300);
+    }, 600);
+  };
+
+  setTimeout(scanNext, 400);
 })();
 function toggleDrawer() {
   var d = document.getElementById('drawer');
