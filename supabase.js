@@ -12,22 +12,20 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
 //  AUTH FUNCTIONS
 // ============================================================
 
-// สมัครสมาชิก
 export async function signUp(email, password, username) {
-  // เช็ค username ซ้ำก่อน
   const { data: existing } = await supabase
     .from('profiles')
     .select('id')
     .eq('username', username)
     .maybeSingle();
 
-  if (existing) return { error: { message: 'Username นี้ถูกใช้แล้ว' } };
+  if (existing) return { error: { message: 'This username is already in use' } };
 
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { username } // ส่ง username ไปให้ trigger
+      data: { username }
     }
   });
 
@@ -49,13 +47,11 @@ export async function signOut() {
   return { error };
 }
 
-// ดึง session ปัจจุบัน
 export async function getSession() {
   const { data: { session } } = await supabase.auth.getSession();
   return session;
 }
 
-// ดึง profile ของ user
 export async function getProfile(userId) {
   const { data, error } = await supabase
     .from('profiles')
