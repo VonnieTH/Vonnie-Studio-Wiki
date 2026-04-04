@@ -213,6 +213,45 @@
 .comm-loading-fill { height:100%; background:var(--cyan); box-shadow:0 0 6px var(--cyan); animation:loadingPulse 1.2s ease infinite; }
 @keyframes loadingPulse { 0%{width:0%} 50%{width:70%} 100%{width:100%} }
 
+/* MESSAGE HOVER ACTIONS */
+.msg-group { position:relative; }
+.msg-actions { position:absolute; top:-6px; right:8px; display:none; align-items:center; gap:1px; background:var(--bg-card); border:1px solid rgba(0,212,255,.25); padding:2px 3px; box-shadow:0 2px 12px rgba(0,0,0,.5); z-index:10; }
+.msg-group:hover .msg-actions { display:flex; }
+.msg-action-btn { background:none; border:none; color:var(--text-dim); font-size:13px; cursor:pointer; padding:3px 6px; transition:all .12s; line-height:1; display:flex; align-items:center; justify-content:center; }
+.msg-action-btn:hover { background:var(--cyan-dim); color:var(--cyan); }
+.msg-action-btn.reply-btn { font-size:11px; font-family:var(--mono); letter-spacing:.06em; }
+
+/* EMOJI PICKER */
+.emoji-picker { position:fixed; z-index:8000; background:var(--bg-card); border:1px solid rgba(0,212,255,.35); box-shadow:0 6px 24px rgba(0,0,0,.7); padding:8px; display:none; border-radius:2px; }
+.emoji-picker.open { display:flex; flex-wrap:wrap; gap:2px; width:220px; }
+.emoji-opt { background:none; border:none; font-size:22px; cursor:pointer; padding:5px 6px; border-radius:4px; transition:background .1s; line-height:1; }
+.emoji-opt:hover { background:rgba(0,212,255,.15); transform:scale(1.2); }
+.emoji-picker-label { width:100%; font-family:var(--mono); font-size:8px; color:var(--text-dim); letter-spacing:.14em; padding:2px 4px 4px; }
+
+/* REACTIONS */
+.msg-reactions { display:flex; flex-wrap:wrap; gap:4px; margin-left:36px; margin-top:5px; min-height:0; }
+.reaction-pill { display:inline-flex; align-items:center; gap:5px; padding:2px 9px 2px 7px; border:1px solid rgba(0,212,255,.18); background:rgba(0,212,255,.04); cursor:pointer; transition:all .15s; font-family:var(--mono); color:var(--text-sub); border-radius:20px; }
+.reaction-pill:hover { border-color:var(--cyan); background:var(--cyan-dim); }
+.reaction-pill.mine { border-color:rgba(0,212,255,.55); background:rgba(0,212,255,.12); color:var(--cyan); }
+.reaction-emoji { font-size:15px; line-height:1; }
+.reaction-count { font-size:10px; }
+
+/* REPLY QUOTE (shown inside message) */
+.msg-reply-quote { margin-left:36px; margin-bottom:3px; border-left:2px solid rgba(0,212,255,.5); padding:4px 10px; background:rgba(0,212,255,.05); cursor:pointer; display:flex; flex-direction:column; gap:1px; max-width:520px; transition:background .15s; }
+.msg-reply-quote:hover { background:rgba(0,212,255,.1); }
+.msg-reply-author { font-family:var(--mono); font-size:9px; color:var(--cyan); letter-spacing:.04em; }
+.msg-reply-text { font-family:var(--mono); font-size:10px; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:400px; }
+
+/* REPLY BAR (above input) */
+.reply-bar { padding:7px 18px; background:var(--bg-panel); border-top:1px solid rgba(0,212,255,.12); display:none; align-items:center; gap:10px; }
+.reply-bar.show { display:flex; }
+.reply-bar-line { width:2px; height:32px; background:var(--cyan); flex-shrink:0; border-radius:1px; }
+.reply-bar-body { flex:1; min-width:0; }
+.reply-bar-to { font-family:var(--mono); font-size:9px; color:var(--cyan); letter-spacing:.06em; margin-bottom:2px; }
+.reply-bar-preview { font-family:var(--mono); font-size:10px; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.reply-bar-close { background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:14px; padding:4px; transition:color .15s; flex-shrink:0; }
+.reply-bar-close:hover { color:#ff6b6b; }
+
 @media (max-width:600px) {
   .comm-sidebar { width:48px; }
   .sidebar-tab { font-size:7px; padding:6px 2px; }
@@ -343,6 +382,16 @@
         </div>
       </div>
 
+      <!-- REPLY BAR -->
+      <div class="reply-bar" id="replyBar">
+        <div class="reply-bar-line"></div>
+        <div class="reply-bar-body">
+          <div class="reply-bar-to" id="replyBarTo">Replying to @---</div>
+          <div class="reply-bar-preview" id="replyBarPreview">---</div>
+        </div>
+        <button class="reply-bar-close" onclick="cancelReply()" title="Cancel reply">✕</button>
+      </div>
+
       <div class="comm-input-bar">
         <button class="comm-img-btn" onclick="document.getElementById('imgFileInput').click()" title="Attach image">
           <i class="fa-solid fa-image"></i>
@@ -371,6 +420,23 @@
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
   <button class="lightbox-close" onclick="closeLightbox()">[ ✕ CLOSE ]</button>
   <img id="lightboxImg" src="" alt="">
+</div>
+
+<!-- EMOJI PICKER -->
+<div class="emoji-picker" id="emojiPicker">
+  <div class="emoji-picker-label">// REACT</div>
+  <button class="emoji-opt" onclick="pickEmoji('👍')">👍</button>
+  <button class="emoji-opt" onclick="pickEmoji('❤️')">❤️</button>
+  <button class="emoji-opt" onclick="pickEmoji('😂')">😂</button>
+  <button class="emoji-opt" onclick="pickEmoji('😮')">😮</button>
+  <button class="emoji-opt" onclick="pickEmoji('😢')">😢</button>
+  <button class="emoji-opt" onclick="pickEmoji('🔥')">🔥</button>
+  <button class="emoji-opt" onclick="pickEmoji('👀')">👀</button>
+  <button class="emoji-opt" onclick="pickEmoji('✅')">✅</button>
+  <button class="emoji-opt" onclick="pickEmoji('💯')">💯</button>
+  <button class="emoji-opt" onclick="pickEmoji('🎉')">🎉</button>
+  <button class="emoji-opt" onclick="pickEmoji('💀')">💀</button>
+  <button class="emoji-opt" onclick="pickEmoji('🤔')">🤔</button>
 </div>
 
 <!-- PROFILE MODAL -->
@@ -460,6 +526,11 @@ let selectedFile    = null;
 let selectedColor   = null;
 let selectedAvatarFile = null;
 let serverStart     = Date.now();
+
+// Reply state
+let replyingTo      = null; // { id, username, content }
+// Emoji picker state
+let emojiTargetMsgId = null;
 
 // ============================================================
 //  INIT
@@ -719,13 +790,51 @@ async function loadMessages() {
     return;
   }
 
+  const msgIds  = data.map(m => m.id);
   const userIds = [...new Set(data.map(m => m.user_id).filter(Boolean))];
+
+  // Fetch profiles
   const { data: profiles } = await supabase
     .from('profiles').select('id, username, avatar_color, avatar_url').in('id', userIds);
   const profileMap = {};
   (profiles||[]).forEach(p => { profileMap[p.id] = p; });
 
-  data.forEach(msg => { msg.profiles = profileMap[msg.user_id]||null; renderMessage(msg); });
+  // Fetch reactions for all messages in this batch
+  const { data: allReactions } = await supabase
+    .from('reactions').select('*').in('message_id', msgIds);
+  const reactionMap = {};
+  (allReactions||[]).forEach(r => {
+    if (!reactionMap[r.message_id]) reactionMap[r.message_id] = [];
+    reactionMap[r.message_id].push(r);
+  });
+
+  // Fetch reply_to messages (for messages that are replies)
+  const replyIds = [...new Set(data.map(m => m.reply_to_id).filter(Boolean))];
+  const replyMap = {};
+  if (replyIds.length) {
+    const { data: replyMsgs } = await supabase
+      .from('messages').select('id, content, user_id').in('id', replyIds);
+    // Also need profile for reply authors
+    const replyUserIds = [...new Set((replyMsgs||[]).map(m => m.user_id).filter(Boolean))];
+    let replyProfiles = [];
+    if (replyUserIds.length) {
+      const { data: rp } = await supabase
+        .from('profiles').select('id, username').in('id', replyUserIds);
+      replyProfiles = rp || [];
+    }
+    const replyProfileMap = {};
+    replyProfiles.forEach(p => { replyProfileMap[p.id] = p; });
+    (replyMsgs||[]).forEach(m => {
+      replyMap[m.id] = { ...m, username: replyProfileMap[m.user_id]?.username || 'unknown' };
+    });
+  }
+
+  data.forEach(msg => {
+    msg.profiles  = profileMap[msg.user_id] || null;
+    msg.reactions = reactionMap[msg.id]     || [];
+    msg.replyTo   = msg.reply_to_id ? replyMap[msg.reply_to_id] || null : null;
+    renderMessage(msg);
+  });
   scrollToBottom();
 }
 
@@ -741,28 +850,48 @@ function renderMessage(msg) {
   const empty = document.getElementById('commEmpty');
   if (empty) empty.remove();
 
-  const isOwn    = msg.user_id === currentUser?.id;
-  const username = msg.profiles?.username || 'unknown';
-  const color    = msg.profiles?.avatar_color || '#00d4ff';
+  const isOwn     = msg.user_id === currentUser?.id;
+  const username  = msg.profiles?.username || 'unknown';
+  const color     = msg.profiles?.avatar_color || '#00d4ff';
   const avatarUrl = msg.profiles?.avatar_url || null;
-  const initial  = username[0].toUpperCase();
-  const time     = new Date(msg.created_at).toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' });
+  const initial   = username[0].toUpperCase();
+  const time      = new Date(msg.created_at).toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' });
+  const reactions = msg.reactions || [];
+  const replyTo   = msg.replyTo   || null;
 
   const group = document.createElement('div');
   group.className = 'msg-group';
   group.dataset.msgId = msg.id;
 
-  // Build avatar HTML
+  // Avatar
   const avatarInner = avatarUrl
     ? `<img src="${avatarUrl}" alt="avatar" style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;">`
     : initial;
   const avatarStyle = avatarUrl ? 'background:transparent;' : `background:${color};`;
 
-  let html = `<div class="msg-header">
+  // Reply quote block
+  let replyHtml = '';
+  if (replyTo) {
+    const preview = replyTo.content ? escHtml(replyTo.content).substring(0, 80) : '[image]';
+    replyHtml = `<div class="msg-reply-quote" onclick="scrollToMessage('${replyTo.id}')">
+      <span class="msg-reply-author">↩ @${escHtml(replyTo.username)}</span>
+      <span class="msg-reply-text">${preview}</span>
+    </div>`;
+  }
+
+  // Hover action buttons
+  const actionsHtml = `<div class="msg-actions">
+    <button class="msg-action-btn" title="React" onclick="openEmojiPicker(event,'${msg.id}')">😊</button>
+    <button class="msg-action-btn reply-btn" title="Reply" onclick="setReply('${msg.id}','${escHtml(username)}',${JSON.stringify(msg.content||'')})">↩ reply</button>
+    ${isOwn ? `<button class="msg-action-btn" title="Delete" onclick="deleteMessage('${msg.id}')" style="color:rgba(255,107,107,.5);" onmouseover="this.style.color='#ff6b6b'" onmouseout="this.style.color='rgba(255,107,107,.5)'">✕</button>` : ''}
+  </div>`;
+
+  // Message header
+  let html = `${actionsHtml}${replyHtml}
+  <div class="msg-header">
     <div class="msg-avatar" style="${avatarStyle}">${avatarInner}</div>
     <span class="msg-username">${escHtml(username)}</span>
     <span class="msg-time">${time}</span>
-    ${isOwn ? `<button onclick="deleteMessage('${msg.id}')" style="margin-left:auto;background:none;border:none;color:rgba(255,107,107,.4);font-family:var(--mono);font-size:9px;cursor:pointer;" onmouseover="this.style.color='#ff6b6b'" onmouseout="this.style.color='rgba(255,107,107,.4)'">[ DEL ]</button>` : ''}
   </div>`;
 
   if (msg.content) {
@@ -772,8 +901,35 @@ function renderMessage(msg) {
     html += `<img class="msg-img" src="${msg.image_url}" alt="image" onclick="openLightbox('${msg.image_url}')">`;
   }
 
+  // Reactions area (always present so it can be updated)
+  html += `<div class="msg-reactions" id="reactions-${msg.id}"></div>`;
+
   group.innerHTML = html;
   container.appendChild(group);
+
+  // Render reaction pills
+  renderReactions(msg.id, reactions);
+}
+
+function renderReactions(msgId, reactions) {
+  const el = document.getElementById('reactions-' + msgId);
+  if (!el) return;
+  // Group by emoji
+  const grouped = {};
+  reactions.forEach(r => {
+    if (!grouped[r.emoji]) grouped[r.emoji] = [];
+    grouped[r.emoji].push(r.user_id);
+  });
+  el.innerHTML = '';
+  Object.entries(grouped).forEach(([emoji, userIds]) => {
+    const mine = userIds.includes(currentUser?.id);
+    const pill = document.createElement('button');
+    pill.className = 'reaction-pill' + (mine ? ' mine' : '');
+    pill.title = `${userIds.length} reaction${userIds.length>1?'s':''}`;
+    pill.innerHTML = `<span class="reaction-emoji">${emoji}</span><span class="reaction-count">${userIds.length}</span>`;
+    pill.onclick = () => toggleReaction(msgId, emoji);
+    el.appendChild(pill);
+  });
 }
 
 function escHtml(str) {
@@ -810,15 +966,21 @@ window.sendMessage = async function() {
     removeImage();
   }
 
-  const { error } = await supabase.from('messages').insert({
-    user_id: currentUser.id, room_id: currentRoomId,
-    content: content || null, image_url
-  });
+  const msgData = {
+    user_id: currentUser.id,
+    room_id: currentRoomId,
+    content: content || null,
+    image_url,
+    reply_to_id: replyingTo ? replyingTo.id : null
+  };
+
+  const { error } = await supabase.from('messages').insert(msgData);
 
   if (!error) {
     input.value = '';
     input.style.height = 'auto';
     document.getElementById('charCounter').textContent = '';
+    cancelReply();
     await loadMessages();
   }
   btn.disabled = false;
@@ -878,16 +1040,132 @@ window.insertFmt = function(before, after) {
 // ============================================================
 function subscribeRealtime() {
   if (realtimeSub) supabase.removeChannel(realtimeSub);
-  realtimeSub = supabase.channel('messages-' + currentRoomId)
+
+  realtimeSub = supabase.channel('room-' + currentRoomId)
+    // New messages
     .on('postgres_changes', { event:'INSERT', schema:'public', table:'messages', filter:`room_id=eq.${currentRoomId}` },
       async (payload) => {
+        const msg = payload.new;
+        // Fetch profile
         const { data: profile } = await supabase.from('profiles')
-          .select('id, username, avatar_color, avatar_url').eq('id', payload.new.user_id).single();
-        renderMessage({ ...payload.new, profiles: profile||null });
+          .select('id, username, avatar_color, avatar_url').eq('id', msg.user_id).single();
+        // Fetch reply_to if any
+        let replyTo = null;
+        if (msg.reply_to_id) {
+          const { data: rMsg } = await supabase.from('messages')
+            .select('id, content, user_id').eq('id', msg.reply_to_id).single();
+          if (rMsg) {
+            const { data: rp } = await supabase.from('profiles')
+              .select('username').eq('id', rMsg.user_id).single();
+            replyTo = { ...rMsg, username: rp?.username || 'unknown' };
+          }
+        }
+        renderMessage({ ...msg, profiles: profile||null, reactions: [], replyTo });
         scrollToBottom();
+      })
+    // Reaction added
+    .on('postgres_changes', { event:'INSERT', schema:'public', table:'reactions' },
+      async (payload) => {
+        const r = payload.new;
+        const el = document.getElementById('reactions-' + r.message_id);
+        if (!el) return;
+        await refreshReactions(r.message_id);
+      })
+    // Reaction removed
+    .on('postgres_changes', { event:'DELETE', schema:'public', table:'reactions' },
+      async (payload) => {
+        const r = payload.old;
+        const el = document.getElementById('reactions-' + r.message_id);
+        if (!el) return;
+        await refreshReactions(r.message_id);
       })
     .subscribe();
 }
+
+async function refreshReactions(msgId) {
+  const { data } = await supabase.from('reactions').select('*').eq('message_id', msgId);
+  renderReactions(msgId, data || []);
+}
+
+// ============================================================
+//  REACTIONS
+// ============================================================
+window.toggleReaction = async function(msgId, emoji) {
+  // Check if current user already reacted with this emoji
+  const { data: existing } = await supabase.from('reactions')
+    .select('id').eq('message_id', msgId).eq('user_id', currentUser.id).eq('emoji', emoji).maybeSingle();
+
+  if (existing) {
+    await supabase.from('reactions').delete().eq('id', existing.id);
+  } else {
+    await supabase.from('reactions').insert({ message_id: msgId, user_id: currentUser.id, emoji });
+  }
+  // Optimistic refresh (realtime will also fire)
+  await refreshReactions(msgId);
+};
+
+// ============================================================
+//  EMOJI PICKER
+// ============================================================
+window.openEmojiPicker = function(e, msgId) {
+  e.stopPropagation();
+  const picker = document.getElementById('emojiPicker');
+  emojiTargetMsgId = msgId;
+  // Position near the button
+  const rect = e.currentTarget.getBoundingClientRect();
+  const pickerW = 220, pickerH = 120;
+  let top  = rect.bottom + 6;
+  let left = rect.left;
+  if (left + pickerW > window.innerWidth)  left = window.innerWidth - pickerW - 8;
+  if (top  + pickerH > window.innerHeight) top  = rect.top - pickerH - 6;
+  picker.style.top  = top  + 'px';
+  picker.style.left = left + 'px';
+  picker.classList.add('open');
+};
+
+window.pickEmoji = function(emoji) {
+  if (!emojiTargetMsgId) return;
+  toggleReaction(emojiTargetMsgId, emoji);
+  closeEmojiPicker();
+};
+
+function closeEmojiPicker() {
+  document.getElementById('emojiPicker').classList.remove('open');
+  emojiTargetMsgId = null;
+}
+
+// Close picker on outside click
+document.addEventListener('click', e => {
+  if (!document.getElementById('emojiPicker').contains(e.target)) {
+    closeEmojiPicker();
+  }
+});
+
+// ============================================================
+//  REPLY
+// ============================================================
+window.setReply = function(msgId, username, content) {
+  replyingTo = { id: msgId, username, content };
+  document.getElementById('replyBarTo').textContent = 'Replying to @' + username;
+  document.getElementById('replyBarPreview').textContent = content || '[image]';
+  document.getElementById('replyBar').classList.add('show');
+  document.getElementById('commInput').focus();
+};
+
+window.cancelReply = function() {
+  replyingTo = null;
+  document.getElementById('replyBar').classList.remove('show');
+};
+
+window.scrollToMessage = function(msgId) {
+  const el = document.querySelector(`[data-msg-id="${msgId}"]`);
+  if (!el) return;
+  el.scrollIntoView({ behavior:'smooth', block:'center' });
+  // Flash highlight
+  el.style.transition = 'background .1s';
+  el.style.background = 'rgba(0,212,255,.08)';
+  setTimeout(() => { el.style.background = ''; }, 1200);
+};
 
 // ============================================================
 //  IMAGE
@@ -1206,7 +1484,7 @@ window.saveProfile = async function() {
 //  KEYBOARD
 // ============================================================
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closeLightbox(); closeProfile(); }
+  if (e.key === 'Escape') { closeLightbox(); closeProfile(); closeEmojiPicker(); cancelReply(); }
 });
 
 init();
