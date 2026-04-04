@@ -849,17 +849,14 @@ window.sendMessage = async function() {
   if (!currentRoomId) return;
 
   btn.disabled = true;
-
   let image_url = null;
 
-  // Upload image ถ้ามี
   if (selectedFile) {
     const ext      = selectedFile.name.split('.').pop();
     const filename = `${currentUser.id}/${Date.now()}.${ext}`;
     const { data: up, error: upErr } = await supabase.storage
       .from('community-images')
       .upload(filename, selectedFile, { cacheControl: '3600', upsert: false });
-
     if (!upErr) {
       const { data: urlData } = supabase.storage.from('community-images').getPublicUrl(filename);
       image_url = urlData.publicUrl;
@@ -876,6 +873,7 @@ window.sendMessage = async function() {
 
   if (!error) {
     input.value = '';
+    await loadMessages(); // ← เพิ่มบรรทัดนี้
   }
 
   btn.disabled = false;
@@ -905,9 +903,13 @@ function subscribeRealtime() {
       table: 'messages',
       filter: `room_id=eq.${currentRoomId}`
     }, async (payload) => {
-      // ดึง profile ของผู้ส่ง
-      const { data: profile } = await getProfile(payload.new.user_id);
-      const fullMsg = { ...payload.new, profiles: profile };
+      // ดึง profile แยก
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, username, avatar_color')
+        .eq('id', payload.new.user_id)
+        .single();
+      const fullMsg = { ...payload.new, profiles: profile || null };
       renderMessage(fullMsg);
       scrollToBottom();
     })
