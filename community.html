@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -999,7 +999,7 @@ function renderMessage(msg, prepend=false, isFirstUnread=false) {
   const avatarUrl=msg.profiles?.avatar_url||null;
   const initial=username[0].toUpperCase();
   const _d=new Date(msg.created_at);
-  const time=_d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+  const time=_d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
   const dateStr=_d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
   const avatarInner=avatarUrl?`<img src="${avatarUrl}" alt="avatar" style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;">`:initial;
   const avatarStyle=avatarUrl?'background:transparent;':`background:${color};`;
