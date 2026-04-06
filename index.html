@@ -1,1493 +1,360 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VonnieStudio Community</title>
+<title>VonnieStudio Wiki</title>
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-<style>
-/* AUTH */
-.auth-screen { min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--bg); padding:20px; }
-.auth-window { width:420px; max-width:95vw; background:var(--bg-card); border:1px solid var(--cyan-border); box-shadow:0 0 40px var(--cyan-glow); position:relative; animation:fadeUp .4s ease both; }
-.auth-window::before,.auth-window::after { content:""; position:absolute; width:8px; height:8px; border-color:var(--cyan); border-style:solid; }
-.auth-window::before { top:-1px; left:-1px; border-width:2px 0 0 2px; }
-.auth-window::after  { bottom:-1px; right:-1px; border-width:0 2px 2px 0; }
-.auth-titlebar { background:rgba(0,212,255,.08); border-bottom:1px solid rgba(0,212,255,.3); padding:8px 16px; font-family:var(--mono); font-size:10px; color:var(--cyan); letter-spacing:.14em; display:flex; justify-content:space-between; }
-.auth-body { padding:28px 24px; }
-.auth-logo { text-align:center; margin-bottom:24px; }
-.auth-logo-title { font-family:var(--mono); font-size:18px; color:var(--cyan); letter-spacing:.08em; text-shadow:0 0 16px var(--cyan); }
-.auth-logo-sub { font-family:var(--mono); font-size:9px; color:var(--text-dim); letter-spacing:.16em; margin-top:4px; }
-.auth-tabs { display:flex; margin-bottom:20px; border-bottom:1px solid rgba(0,212,255,.2); }
-.auth-tab { flex:1; padding:8px; font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-align:center; background:none; border:none; color:var(--text-dim); cursor:pointer; border-bottom:2px solid transparent; transition:all .15s; margin-bottom:-1px; }
-.auth-tab.active { color:var(--cyan); border-bottom-color:var(--cyan); }
-.auth-form { display:flex; flex-direction:column; gap:14px; }
-.auth-field { display:flex; flex-direction:column; gap:5px; }
-.auth-label { font-family:var(--mono); font-size:9px; color:var(--text-dim); letter-spacing:.12em; }
-.auth-input { background:rgba(0,212,255,.04); border:1px solid rgba(0,212,255,.25); padding:9px 12px; font-family:var(--mono); font-size:12px; color:var(--text-main); outline:none; transition:border-color .15s; caret-color:var(--cyan); }
-.auth-input:focus { border-color:var(--cyan); }
-.auth-input::placeholder { color:var(--text-dim); }
-.auth-hint { font-family:var(--mono); font-size:9px; color:var(--text-dim); }
-.auth-btn { font-family:var(--mono); font-size:11px; letter-spacing:.12em; padding:10px; border:1px solid var(--cyan); background:var(--cyan-dim); color:var(--cyan); cursor:pointer; transition:all .15s; margin-top:4px; }
-.auth-btn:hover { background:rgba(0,212,255,.25); }
-.auth-btn:disabled { opacity:.5; cursor:not-allowed; }
-.auth-error { font-family:var(--mono); font-size:10px; color:#ff6b6b; background:rgba(255,107,107,.08); border:1px solid rgba(255,107,107,.3); padding:8px 12px; display:none; }
-.auth-error.show { display:block; }
-.auth-success { font-family:var(--mono); font-size:10px; color:var(--green); background:rgba(64,255,128,.06); border:1px solid rgba(64,255,128,.3); padding:8px 12px; display:none; text-align:center; }
-.auth-success.show { display:block; }
-.auth-privacy { font-family:var(--mono); font-size:9px; color:var(--text-dim); text-align:center; margin-top:8px; line-height:1.6; }
-.auth-back { font-family:var(--mono); font-size:10px; color:var(--text-dim); text-decoration:none; display:inline-flex; align-items:center; gap:6px; margin-bottom:16px; transition:color .15s; }
-.auth-back:hover { color:var(--cyan); }
-
-/* COMMUNITY */
-.community-screen { display:none; }
-.community-screen.show { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
-
-.comm-nav { background:var(--bg-header); border-bottom:1px solid var(--cyan-border); box-shadow:0 0 20px var(--cyan-glow); height:56px; position:sticky; top:0; z-index:200; display:flex; align-items:center; padding:0 20px; gap:14px; }
-.comm-nav-title { font-family:var(--mono); font-size:13px; color:var(--cyan); letter-spacing:.08em; text-shadow:0 0 12px var(--cyan); flex:1; }
-.comm-nav-title span { color:var(--text-dim); font-size:10px; }
-.comm-nav-user { display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:10px; color:var(--text-sub); }
-.comm-avatar { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:11px; font-weight:700; color:#000; flex-shrink:0; cursor:pointer; transition:box-shadow .15s; }
-.comm-avatar:hover { box-shadow:0 0 10px rgba(0,212,255,.5); }
-.comm-logout-btn { font-family:var(--mono); font-size:9px; letter-spacing:.1em; padding:4px 10px; border:1px solid rgba(255,107,107,.3); background:transparent; color:#ff6b6b; cursor:pointer; transition:all .15s; }
-.comm-logout-btn:hover { background:rgba(255,107,107,.08); border-color:#ff6b6b; }
-.comm-back-btn { font-family:var(--mono); font-size:9px; letter-spacing:.1em; padding:4px 10px; border:1px solid rgba(0,212,255,.3); background:transparent; color:var(--cyan); cursor:pointer; transition:all .15s; text-decoration:none; display:flex; align-items:center; gap:5px; }
-.comm-back-btn:hover { background:var(--cyan-dim); }
-
-.community-body { display:flex; flex:1; height:calc(100vh - 56px); overflow:hidden; }
-
-/* SIDEBAR */
-.comm-sidebar { width:210px; flex-shrink:0; background:var(--bg-panel); border-right:1px solid rgba(0,212,255,.15); display:flex; flex-direction:column; overflow:hidden; }
-.sidebar-tabs { display:flex; border-bottom:1px solid rgba(0,212,255,.15); flex-shrink:0; }
-.sidebar-tab { flex:1; padding:8px 4px; font-family:var(--mono); font-size:9px; letter-spacing:.1em; background:none; border:none; color:var(--text-dim); cursor:pointer; transition:all .15s; border-bottom:2px solid transparent; margin-bottom:-1px; }
-.sidebar-tab.active { color:var(--cyan); border-bottom-color:var(--cyan); background:rgba(0,212,255,.04); }
-.sidebar-tab:hover { color:var(--cyan); }
-.sidebar-panel { flex:1; overflow-y:auto; display:none; flex-direction:column; }
-.sidebar-panel.active { display:flex; }
-
-.comm-sidebar-label { font-family:var(--mono); font-size:9px; color:var(--text-dim); letter-spacing:.2em; padding:12px 14px 6px; text-transform:uppercase; flex-shrink:0; }
-.room-item { padding:8px 14px; font-family:var(--mono); font-size:11px; color:var(--text-sub); cursor:pointer; transition:all .1s; border-left:2px solid transparent; display:flex; align-items:center; gap:6px; }
-.room-item:hover { background:var(--cyan-dim); color:var(--cyan); }
-.room-item.active { background:var(--cyan-dim); color:var(--cyan); border-left-color:var(--cyan); }
-.room-item-hash { color:rgba(0,212,255,.4); font-size:12px; }
-
-/* SERVER TAB */
-.server-stat-block { padding:10px 14px; border-bottom:1px solid rgba(0,212,255,.08); }
-.server-stat-label { font-family:var(--mono); font-size:9px; color:var(--text-dim); letter-spacing:.14em; margin-bottom:6px; }
-.server-stat-val { font-family:var(--mono); font-size:18px; color:var(--cyan); text-shadow:0 0 10px var(--cyan); letter-spacing:.04em; }
-.server-stat-sub { font-family:var(--mono); font-size:9px; color:var(--text-dim); margin-top:2px; }
-.server-status-dot { display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:4px; }
-.server-status-dot.online { background:var(--green); box-shadow:0 0 6px var(--green); }
-
-.online-user-item { display:flex; align-items:center; gap:8px; padding:5px 14px; font-family:var(--mono); font-size:10px; color:var(--text-sub); }
-.online-user-dot { width:5px; height:5px; border-radius:50%; background:var(--green); box-shadow:0 0 4px var(--green); flex-shrink:0; }
-.online-user-name { flex:1; }
-.online-you { font-size:8px; color:var(--text-dim); }
-
-/* CHAT */
-.comm-chat { flex:1; display:flex; flex-direction:column; overflow:hidden; background:var(--bg); }
-.comm-chat-header { padding:10px 18px; border-bottom:1px solid rgba(0,212,255,.12); background:var(--bg-panel); font-family:var(--mono); font-size:11px; color:var(--text-sub); display:flex; align-items:center; gap:8px; }
-.comm-chat-room-name { color:var(--cyan); font-size:13px; }
-
-.comm-messages { flex:1; overflow-y:auto; padding:16px 18px; display:flex; flex-direction:column; gap:2px; scroll-behavior:smooth; }
-.comm-messages::-webkit-scrollbar { width:4px; }
-.comm-messages::-webkit-scrollbar-thumb { background:rgba(0,212,255,.2); }
-
-.msg-group { margin-bottom:12px; }
-.msg-header { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
-.msg-avatar { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:10px; font-weight:700; color:#000; flex-shrink:0; }
-.msg-username { font-family:var(--mono); font-size:11px; color:var(--cyan); letter-spacing:.04em; }
-.msg-time { font-family:var(--mono); font-size:9px; color:var(--text-dim); }
-.msg-bubble { font-family:var(--mono); font-size:12px; color:var(--text-main); line-height:1.7; padding:6px 10px; margin-left:36px; background:rgba(0,212,255,.03); border-left:1px solid rgba(0,212,255,.1); word-break:break-word; white-space:pre-wrap; }
-.msg-bubble.own { background:rgba(0,212,255,.06); border-left-color:rgba(0,212,255,.3); }
-.msg-bubble strong { color:var(--text-main); font-weight:700; }
-.msg-bubble em { color:var(--text-sub); font-style:italic; }
-.msg-img { max-width:280px; max-height:200px; border:1px solid rgba(0,212,255,.2); cursor:pointer; margin-top:4px; display:block; margin-left:36px; }
-.msg-img:hover { border-color:var(--cyan); }
-.comm-empty { flex:1; display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:11px; color:var(--text-dim); letter-spacing:.1em; flex-direction:column; gap:8px; }
-
-/* INPUT */
-.comm-input-bar { padding:10px 18px; border-top:1px solid rgba(0,212,255,.15); background:var(--bg-panel); display:flex; align-items:flex-end; gap:10px; }
-.comm-input {
-  flex:1; background:rgba(0,212,255,.04);
-  border:1px solid rgba(0,212,255,.25);
-  padding:9px 14px;
-  font-family:var(--mono); font-size:12px;
-  color:var(--text-main); outline:none;
-  caret-color:var(--cyan); transition:border-color .15s;
-  resize:none; min-height:36px; max-height:120px;
-  overflow-y:auto; line-height:1.6;
-}
-.comm-input:focus { border-color:var(--cyan); }
-.comm-input::placeholder { color:var(--text-dim); }
-.comm-input-wrap { flex:1; display:flex; flex-direction:column; gap:4px; }
-.char-counter { font-family:var(--mono); font-size:9px; color:var(--text-dim); text-align:right; height:12px; transition:color .15s; }
-.char-counter.warn { color:var(--gold); }
-.char-counter.danger { color:#ff6b6b; }
-.comm-img-btn { width:36px; height:36px; flex-shrink:0; border:1px solid rgba(0,212,255,.25); background:transparent; color:var(--text-dim); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; font-size:14px; }
-.comm-img-btn:hover { border-color:var(--cyan); color:var(--cyan); background:var(--cyan-dim); }
-.comm-send-btn { padding:0 16px; height:36px; font-family:var(--mono); font-size:10px; letter-spacing:.1em; border:1px solid var(--cyan); background:var(--cyan-dim); color:var(--cyan); cursor:pointer; transition:all .15s; white-space:nowrap; flex-shrink:0; }
-.comm-send-btn:hover { background:rgba(0,212,255,.25); }
-.comm-send-btn:disabled { opacity:.4; cursor:not-allowed; }
-
-/* FORMAT TOOLBAR */
-.fmt-toolbar { display:flex; gap:4px; padding:4px 0 0; }
-.fmt-btn { width:24px; height:22px; background:rgba(0,212,255,.06); border:1px solid rgba(0,212,255,.2); color:var(--text-dim); font-size:11px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; font-family:serif; }
-.fmt-btn:hover { border-color:var(--cyan); color:var(--cyan); background:var(--cyan-dim); }
-.fmt-hint { font-family:var(--mono); font-size:8px; color:var(--text-dim); letter-spacing:.06em; align-self:center; margin-left:4px; }
-
-/* IMAGE PREVIEW */
-.img-preview-wrap { padding:8px 18px 0; background:var(--bg-panel); display:none; align-items:center; gap:10px; }
-.img-preview-wrap.show { display:flex; }
-.img-preview-thumb { height:48px; border:1px solid rgba(0,212,255,.3); }
-.img-preview-name { font-family:var(--mono); font-size:10px; color:var(--text-sub); flex:1; }
-.img-preview-remove { background:none; border:none; color:#ff6b6b; font-family:var(--mono); font-size:11px; cursor:pointer; }
-
-/* LIGHTBOX */
-.lightbox { display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,.92); align-items:center; justify-content:center; }
-.lightbox.open { display:flex; }
-.lightbox img { max-width:90vw; max-height:90vh; border:1px solid var(--cyan-border); }
-.lightbox-close { position:absolute; top:20px; right:24px; background:none; border:none; color:var(--text-sub); font-family:var(--mono); font-size:16px; cursor:pointer; }
-
-/* PROFILE MODAL */
-.profile-modal-overlay { display:none; position:fixed; inset:0; z-index:9500; background:rgba(0,0,0,.85); align-items:center; justify-content:center; }
-.profile-modal-overlay.open { display:flex; animation:fadeUp .2s ease; }
-.profile-modal-box { width:380px; max-width:92vw; background:var(--bg-card); border:1px solid var(--cyan-border); box-shadow:0 0 40px var(--cyan-glow); position:relative; }
-.profile-modal-box::before,.profile-modal-box::after { content:""; position:absolute; width:8px; height:8px; border-color:var(--cyan); border-style:solid; }
-.profile-modal-box::before { top:-1px; left:-1px; border-width:2px 0 0 2px; }
-.profile-modal-box::after { bottom:-1px; right:-1px; border-width:0 2px 2px 0; }
-.profile-modal-header { background:rgba(0,212,255,.07); border-bottom:1px solid rgba(0,212,255,.3); padding:8px 16px; font-family:var(--mono); font-size:10px; letter-spacing:.14em; color:var(--cyan); display:flex; justify-content:space-between; align-items:center; }
-.profile-modal-close { background:none; border:none; color:var(--text-sub); font-family:var(--mono); font-size:12px; cursor:pointer; transition:color .15s; }
-.profile-modal-close:hover { color:var(--cyan); }
-.profile-modal-body { padding:20px 18px; }
-
-.profile-preview { display:flex; align-items:center; gap:14px; margin-bottom:20px; padding:12px; background:rgba(0,212,255,.03); border:1px solid rgba(0,212,255,.1); }
-.profile-preview-avatar { width:48px; height:48px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:18px; font-weight:700; color:#000; flex-shrink:0; }
-.profile-preview-info { flex:1; }
-.profile-preview-name { font-family:var(--mono); font-size:13px; color:var(--text-main); }
-.profile-preview-role { font-family:var(--mono); font-size:9px; color:var(--text-dim); margin-top:2px; letter-spacing:.08em; }
-
-.profile-section-label { font-family:var(--mono); font-size:9px; color:var(--text-dim); letter-spacing:.14em; margin-bottom:10px; }
-
-/* AVATAR IMAGE */
-.avatar-img { width:100%; height:100%; border-radius:50%; object-fit:cover; display:block; }
-.comm-avatar img, .msg-avatar img, .profile-preview-avatar img { width:100%; height:100%; border-radius:50%; object-fit:cover; display:block; }
-
-/* AVATAR UPLOAD */
-.avatar-upload-zone { border:1px dashed rgba(0,212,255,.3); background:rgba(0,212,255,.03); padding:20px; text-align:center; cursor:pointer; transition:all .2s; margin-bottom:18px; }
-.avatar-upload-zone:hover { border-color:var(--cyan); background:rgba(0,212,255,.07); }
-.avatar-upload-zone.drag-over { border-color:var(--cyan); background:rgba(0,212,255,.1); }
-.avatar-upload-icon { font-size:24px; color:rgba(0,212,255,.4); margin-bottom:8px; }
-.avatar-upload-text { font-family:var(--mono); font-size:10px; color:var(--text-dim); letter-spacing:.08em; }
-.avatar-upload-sub { font-family:var(--mono); font-size:8px; color:var(--text-dim); margin-top:4px; }
-.avatar-upload-preview { width:80px; height:80px; border-radius:50%; border:2px solid var(--cyan); overflow:hidden; margin:0 auto 12px; position:relative; }
-.avatar-upload-preview img { width:100%; height:100%; object-fit:cover; }
-.avatar-upload-change { font-family:var(--mono); font-size:9px; color:var(--cyan); background:none; border:none; cursor:pointer; margin-top:8px; letter-spacing:.08em; }
-
-/* IMAGE CROPPER */
-.crop-editor { display:none; flex-direction:column; align-items:center; gap:10px; margin-bottom:18px; }
-.crop-editor.show { display:flex; }
-.crop-canvas-wrap { position:relative; width:240px; height:240px; border:1px solid rgba(0,212,255,.3); overflow:hidden; cursor:grab; user-select:none; flex-shrink:0; background:#000; }
-.crop-canvas-wrap:active { cursor:grabbing; }
-.crop-canvas-wrap canvas { display:block; }
-.crop-overlay { position:absolute; inset:0; pointer-events:none; }
-.crop-controls { width:100%; display:flex; flex-direction:column; gap:8px; }
-.crop-zoom-row { display:flex; align-items:center; gap:8px; }
-.crop-zoom-label { font-family:var(--mono); font-size:9px; color:var(--text-dim); width:32px; }
-.crop-zoom-slider { flex:1; accent-color:var(--cyan); cursor:pointer; }
-.crop-zoom-val { font-family:var(--mono); font-size:9px; color:var(--cyan); width:32px; text-align:right; }
-.crop-actions { display:flex; gap:8px; width:100%; }
-.crop-apply-btn { flex:1; font-family:var(--mono); font-size:10px; letter-spacing:.1em; padding:7px; border:1px solid var(--cyan); background:var(--cyan-dim); color:var(--cyan); cursor:pointer; transition:all .15s; }
-.crop-apply-btn:hover { background:rgba(0,212,255,.25); }
-.crop-cancel-btn { font-family:var(--mono); font-size:10px; letter-spacing:.1em; padding:7px 12px; border:1px solid rgba(0,212,255,.2); background:transparent; color:var(--text-dim); cursor:pointer; transition:all .15s; }
-.crop-cancel-btn:hover { border-color:var(--cyan); color:var(--cyan); }
-
-.profile-save-btn { width:100%; font-family:var(--mono); font-size:10px; letter-spacing:.12em; padding:9px; border:1px solid var(--cyan); background:var(--cyan-dim); color:var(--cyan); cursor:pointer; transition:all .15s; }
-.profile-save-btn:hover { background:rgba(0,212,255,.25); }
-.profile-save-btn:disabled { opacity:.5; cursor:not-allowed; }
-.profile-save-msg { font-family:var(--mono); font-size:9px; color:var(--green); text-align:center; height:16px; margin-top:8px; }
-
-/* LOADING */
-.comm-loading { display:flex; align-items:center; justify-content:center; min-height:100vh; background:var(--bg); font-family:var(--mono); font-size:12px; color:var(--cyan); letter-spacing:.1em; flex-direction:column; gap:14px; }
-.comm-loading-bar { width:200px; height:2px; background:rgba(0,212,255,.1); border:1px solid rgba(0,212,255,.2); }
-.comm-loading-fill { height:100%; background:var(--cyan); box-shadow:0 0 6px var(--cyan); animation:loadingPulse 1.2s ease infinite; }
-@keyframes loadingPulse { 0%{width:0%} 50%{width:70%} 100%{width:100%} }
-
-/* MESSAGE HOVER ACTIONS */
-.msg-group { position:relative; }
-.msg-actions { position:absolute; top:-6px; right:8px; display:none; align-items:center; gap:1px; background:var(--bg-card); border:1px solid rgba(0,212,255,.25); padding:2px 3px; box-shadow:0 2px 12px rgba(0,0,0,.5); z-index:10; }
-.msg-group:hover .msg-actions { display:flex; }
-.msg-action-btn { background:none; border:none; color:var(--text-dim); font-size:13px; cursor:pointer; padding:3px 6px; transition:all .12s; line-height:1; display:flex; align-items:center; justify-content:center; }
-.msg-action-btn:hover { background:var(--cyan-dim); color:var(--cyan); }
-.msg-action-btn.reply-btn { font-size:11px; font-family:var(--mono); letter-spacing:.06em; }
-
-/* EMOJI PICKER */
-.emoji-picker { position:fixed; z-index:8000; background:var(--bg-card); border:1px solid rgba(0,212,255,.35); box-shadow:0 6px 24px rgba(0,0,0,.7); padding:8px; display:none; border-radius:2px; }
-.emoji-picker.open { display:flex; flex-wrap:wrap; gap:2px; width:220px; }
-.emoji-opt { background:none; border:none; font-size:22px; cursor:pointer; padding:5px 6px; border-radius:4px; transition:background .1s; line-height:1; }
-.emoji-opt:hover { background:rgba(0,212,255,.15); transform:scale(1.2); }
-.emoji-picker-label { width:100%; font-family:var(--mono); font-size:8px; color:var(--text-dim); letter-spacing:.14em; padding:2px 4px 4px; }
-
-/* REACTIONS */
-.msg-reactions { display:flex; flex-wrap:wrap; gap:4px; margin-left:36px; margin-top:5px; min-height:0; }
-.reaction-pill { display:inline-flex; align-items:center; gap:5px; padding:2px 9px 2px 7px; border:1px solid rgba(0,212,255,.18); background:rgba(0,212,255,.04); cursor:pointer; transition:all .15s; font-family:var(--mono); color:var(--text-sub); border-radius:20px; }
-.reaction-pill:hover { border-color:var(--cyan); background:var(--cyan-dim); }
-.reaction-pill.mine { border-color:rgba(0,212,255,.55); background:rgba(0,212,255,.12); color:var(--cyan); }
-.reaction-emoji { font-size:15px; line-height:1; }
-.reaction-count { font-size:10px; }
-
-/* REPLY QUOTE (shown inside message) */
-.msg-reply-quote { margin-left:36px; margin-bottom:3px; border-left:2px solid rgba(0,212,255,.5); padding:4px 10px; background:rgba(0,212,255,.05); cursor:pointer; display:flex; flex-direction:column; gap:1px; max-width:520px; transition:background .15s; }
-.msg-reply-quote:hover { background:rgba(0,212,255,.1); }
-.msg-reply-author { font-family:var(--mono); font-size:9px; color:var(--cyan); letter-spacing:.04em; }
-.msg-reply-text { font-family:var(--mono); font-size:10px; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:400px; }
-
-/* REPLY BAR (above input) */
-.reply-bar { padding:7px 18px; background:var(--bg-panel); border-top:1px solid rgba(0,212,255,.12); display:none; align-items:center; gap:10px; }
-.reply-bar.show { display:flex; }
-.reply-bar-line { width:2px; height:32px; background:var(--cyan); flex-shrink:0; border-radius:1px; }
-.reply-bar-body { flex:1; min-width:0; }
-.reply-bar-to { font-family:var(--mono); font-size:9px; color:var(--cyan); letter-spacing:.06em; margin-bottom:2px; }
-.reply-bar-preview { font-family:var(--mono); font-size:10px; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.reply-bar-close { background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:14px; padding:4px; transition:color .15s; flex-shrink:0; }
-.reply-bar-close:hover { color:#ff6b6b; }
-
-@media (max-width:600px) {
-  .comm-sidebar { width:48px; }
-  .sidebar-tab { font-size:7px; padding:6px 2px; }
-  .comm-sidebar-label,.server-stat-sub,.online-you { display:none; }
-  .room-item { padding:10px; justify-content:center; }
-  .room-item span:not(.room-item-hash) { display:none; }
-  .online-user-name { display:none; }
-  .server-stat-val { font-size:14px; }
-  .fmt-hint { display:none; }
-}
-</style>
 </head>
 <body>
 
-<div class="cursor-dot" id="cursorDot"></div>
-<div class="cursor-ring" id="cursorRing"></div>
+<!-- LOADER -->
+<div id="loader">
+  <div class="ld-window">
+    <div class="ld-titlebar">
+      <span>VONNIESTUDIO_WIKI.EXE &mdash; SYSTEM CHECK</span>
+      <span id="ld-time">00:00</span>
+    </div>
+    <div class="ld-body">
+      <div class="ld-scan-rows" id="ld-scan-rows"></div>
+      <div class="ld-bar-row">
+        <div class="ld-bar-wrap"><div class="ld-bar-fill" id="ld-bar"></div></div>
+        <div class="ld-pct" id="ld-pct">0%</div>
+      </div>
+      <div class="ld-captcha-wrap" id="ld-captcha">
+        <div class="ld-captcha-label"><span>IDENTITY VERIFICATION REQUIRED</span> — Confirm that you are not a bot</div>
+        <div id="recaptcha-box"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
-<!-- LOADING -->
-<div class="comm-loading" id="commLoading">
-  <div>// COMMUNITY.EXE — INITIALIZING</div>
-  <div class="comm-loading-bar"><div class="comm-loading-fill"></div></div>
+<!-- APP -->
+<div id="app">
+
+<div class="drawer-overlay" id="overlay" onclick="closeDrawer()"></div>
+
+<aside class="drawer" id="drawer">
+  <div class="drawer-nav-label">Navigation</div>
+  <a class="drawer-link" data-page="home" href="#" onclick="navigate('home');closeDrawer();return false;"><span class="drawer-link-icon">&gt;</span>Home</a>
+  <a class="drawer-link" data-page="about" href="#" onclick="navigate('about');closeDrawer();return false;"><span class="drawer-link-icon">&gt;</span>About Me</a>
+  <a class="drawer-link" data-page="projects" href="#" onclick="navigate('projects');closeDrawer();return false;"><span class="drawer-link-icon">&gt;</span>Projects</a>
+  <a class="drawer-link" data-page="contact" href="#" onclick="navigate('contact');closeDrawer();return false;"><span class="drawer-link-icon">&gt;</span>Contact</a>
+  <a class="drawer-link" href="community.html" style="color:var(--green);border-left:2px solid rgba(64,255,128,.3);"><span class="drawer-link-icon">&gt;</span>Community <span style="font-size:8px;color:var(--green);border:1px solid rgba(64,255,128,.4);padding:1px 5px;margin-left:4px;">NEW</span></a>
+  <div class="drawer-divider"></div>
+  <div class="drawer-nav-label">Wiki Stats</div>
+  <div class="drawer-stats-section">
+    <div class="drawer-stat-row"><span class="drawer-stat-key">projects</span><span class="drawer-stat-val">1</span></div>
+    <div class="drawer-stat-row"><span class="drawer-stat-key">status</span><span class="drawer-stat-val" style="color:var(--green)">active</span></div>
+    <div class="drawer-stat-row"><span class="drawer-stat-key">updated</span><span class="drawer-stat-val">mar.2026</span></div>
+  </div>
+  <div class="drawer-footer">// vonniestudio_wiki v2.0</div>
+</aside>
+
+<nav class="topnav">
+  <div class="nav-left">
+    <button class="hamburger" id="hamburger" onclick="toggleDrawer()">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+  <div class="nav-center">
+    <img class="nav-logo-img" src="FSP_Logo.png" alt="logo" onerror="this.style.display='none'">
+    <div class="nav-titles">
+      <div class="nav-title">VONNIESTUDIO_WIKI</div>
+      <div class="nav-subtitle">Knowledge Base · Est. 2026</div>
+    </div>
+    <img class="nav-logo-img" src="FSP_Logo.png" alt="logo" onerror="this.style.display='none'">
+  </div>
+  <div class="nav-right-area">
+    <button class="search-toggle-btn" id="searchToggleBtn" onclick="toggleSearch()" title="Search">
+      <i class="fa-solid fa-magnifying-glass"></i>
+    </button>
+  </div>
+</nav>
+
+<!-- SEARCH OVERLAY -->
+<div class="search-overlay" id="searchOverlay" onclick="if(event.target===this)closeSearch()">
+  <div class="search-box">
+    <div class="search-box-header">
+      <span>// SEARCH_WIKI.EXE</span>
+      <button class="search-close" onclick="closeSearch()">[ X ]</button>
+    </div>
+    <div class="search-input-wrap">
+      <i class="fa-solid fa-magnifying-glass search-icon"></i>
+      <input type="text" class="search-input" id="searchInput" placeholder="Search pages, projects, skills..." autocomplete="off" oninput="doSearch(this.value)">
+      <span class="search-shortcut">ESC</span>
+    </div>
+    <div class="search-results" id="searchResults"></div>
+  </div>
 </div>
 
-<!-- AUTH -->
-<div class="auth-screen" id="authScreen" style="display:none;">
-  <div class="auth-window">
-    <div class="auth-titlebar">
-      <span>// VONNIE_AUTH.EXE — SECURE LOGIN</span>
-      <span id="authTime">00:00</span>
+<div class="layout">
+<main class="main">
+
+  <!-- ===== HOME PAGE ===== -->
+  <div class="page" id="page-home">
+    <div class="page-header">
+      <h1 class="page-title">// HOME</h1>
+      <div class="page-header-line"></div>
+      <button class="page-btn" onclick="openShare()">Share</button>
     </div>
-    <div class="auth-body">
-      <a href="index.html" class="auth-back"><i class="fa-solid fa-chevron-left" style="font-size:9px;"></i> Back to Wiki</a>
-      <div class="auth-logo">
-        <div class="auth-logo-title">VONNIE<span style="color:var(--text-main)">STUDIO</span></div>
-        <div class="auth-logo-sub">// COMMUNITY ACCESS PORTAL</div>
-      </div>
-      <div class="auth-tabs">
-        <button class="auth-tab active" id="tabLogin" onclick="switchTab('login')">[ LOGIN ]</button>
-        <button class="auth-tab" id="tabRegister" onclick="switchTab('register')">[ REGISTER ]</button>
-      </div>
-      <div class="auth-error" id="authError"></div>
-      <div class="auth-success" id="authSuccess"></div>
-      <div id="formLogin">
-        <div class="auth-form">
-          <div class="auth-field"><label class="auth-label">EMAIL</label><input type="email" class="auth-input" id="loginEmail" placeholder="your@email.com" autocomplete="email"></div>
-          <div class="auth-field"><label class="auth-label">PASSWORD</label><input type="password" class="auth-input" id="loginPassword" placeholder="••••••••" autocomplete="current-password"></div>
-          <button class="auth-btn" id="loginBtn" onclick="handleLogin()">[ LOGIN → ]</button>
+
+    <div class="wiki-banner" style="animation:cardIn .5s ease both;">
+      <div class="banner-eyebrow">// Vonnie_WIKI.DAT — WELCOME_SCREEN</div>
+      <div class="banner-title" id="typedTitle">Vonnie<span>Studio</span> Wiki</div>
+      <div class="banner-divider"></div>
+      <div class="banner-glitch-line" id="glitchLine">SYSTEM ONLINE — ALL MODULES LOADED</div>
+    </div>
+
+    <div class="grid-2" style="animation:cardIn .4s ease .08s both;">
+      <div class="wiki-card">
+        <div class="wiki-card-header">About Me</div>
+        <div class="wiki-card-body">
+          <p class="about-text">I'm a computer engineering student currently learning web development, machine learning, system creation and security</p>
+          <div class="tag-row">
+            <span class="wiki-tag tag-cyan">React</span>
+            <span class="wiki-tag tag-cyan">Python</span>
+            <span class="wiki-tag tag-gold">Machine Learning</span>
+            <span class="wiki-tag tag-purple">UI/UX</span>
+            <span class="wiki-tag tag-green">Security</span>
+          </div>
         </div>
       </div>
-      <div id="formRegister" style="display:none;">
-        <div class="auth-form">
-          <div class="auth-field"><label class="auth-label">USERNAME</label><input type="text" class="auth-input" id="regUsername" placeholder="vonnie_user" autocomplete="off" maxlength="20"><span class="auth-hint">Letters, numbers, underscores — max 20 chars</span></div>
-          <div class="auth-field"><label class="auth-label">EMAIL</label><input type="email" class="auth-input" id="regEmail" placeholder="your@email.com" autocomplete="email"></div>
-          <div class="auth-field"><label class="auth-label">PASSWORD</label><input type="password" class="auth-input" id="regPassword" placeholder="At least 8 characters" autocomplete="new-password" minlength="8"></div>
-          <button class="auth-btn" id="registerBtn" onclick="handleRegister()">[ CREATE ACCOUNT → ]</button>
-          <div class="auth-privacy"><i class="fa-solid fa-shield-halved" style="color:var(--green)"></i> Username only — no real name or phone collected</div>
+      <div class="wiki-card">
+        <div class="wiki-card-header">Quick Info</div>
+        <div class="wiki-card-body">
+          <div class="info-row"><span class="info-key">name</span><span class="info-val hl">Vonnie Ellipse</span></div>
+          <div class="info-row"><span class="info-key">location</span><span class="info-val">Thailand</span></div>
+          <div class="info-row"><span class="info-key">role</span><span class="info-val">Student</span></div>
+          <div class="info-row"><span class="info-key">status</span><span class="info-val" style="color:var(--green)">Open to collab</span></div>
         </div>
+      </div>
+    </div>
+
+    <!-- Featured Project -->
+    <div class="wiki-card featured-project-card" style="margin-bottom:14px;animation:cardIn .4s ease .12s both;">
+      <div class="wiki-card-header"><i class="fa-solid fa-star"></i> Featured Project</div>
+      <div class="wiki-card-body">
+        <div class="featured-proj-inner">
+          <div class="featured-proj-left">
+            <div class="featured-proj-num">01</div>
+            <div>
+              <div class="featured-proj-name">VonnieStudio Wiki</div>
+              <div class="featured-proj-tech">HTML · CSS · JavaScript</div>
+              <div class="featured-proj-desc">A personal wiki / portfolio site with retro cyber aesthetic, loader, routing, search and modals. Built from scratch.</div>
+            </div>
+          </div>
+          <div class="featured-proj-right">
+            <span class="proj-badge badge-wip">WIP</span>
+            <button class="featured-proj-btn" onclick="navigate('projects')">[ VIEW ALL ]</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Latest Activity Log -->
+    <div class="wiki-card" style="margin-bottom:14px;animation:cardIn .4s ease .16s both;">
+      <div class="wiki-card-header"><i class="fa-solid fa-terminal" style="font-size:9px;color:var(--cyan)"></i> Latest Activity</div>
+      <div class="wiki-card-body">
+        <div class="log-entry"><span class="log-date">[2026.03]</span><span class="log-msg">Wiki v1.0 launched — initial release</span><span class="log-badge log-new">NEW</span></div>
+        <div class="log-entry"><span class="log-date">[2026.03]</span><span class="log-msg">Added social links — YouTube, Discord, Reddit, X</span></div>
+        <div class="log-entry"><span class="log-date">[2026.03]</span><span class="log-msg">Loader + reCAPTCHA verification system deployed</span></div>
+        <div class="log-entry"><span class="log-date">[2026.02]</span><span class="log-msg">Project started — concept &amp; design phase</span></div>
+      </div>
+    </div>
+
+    <div class="wiki-card" style="margin-bottom:20px;animation:cardIn .4s ease .2s both;">
+      <div class="wiki-card-header">Socials &amp; Contact</div>
+      <div class="wiki-card-body" id="social-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px"></div>
+    </div>
+  </div>
+
+  <!-- ===== ABOUT PAGE ===== -->
+  <div class="page hidden" id="page-about">
+    <div class="page-header">
+      <h1 class="page-title">// ABOUT_ME</h1>
+      <div class="page-header-line"></div>
+    </div>
+    <div class="wiki-card" style="margin-bottom:14px;animation:cardIn .4s ease both;">
+      <div class="wiki-card-header">Profile</div>
+      <div class="wiki-card-body">
+        <div class="profile-block">
+          <div class="profile-avatar">
+            <div class="profile-avatar-inner">VE</div>
+          </div>
+          <div class="profile-info">
+            <div class="profile-name">Vonnie Ellipse</div>
+            <div class="profile-role">Computer Engineering Student</div>
+            <div class="profile-loc"><i class="fa-solid fa-location-dot" style="color:var(--cyan);font-size:9px;"></i> Thailand</div>
+          </div>
+        </div>
+        <div class="about-long-text">
+          I'm a computer engineering student with a deep passion for building things from scratch. I enjoy the intersection of systems thinking and creative design — whether that's writing clean backend logic, training ML models, or crafting pixel-perfect UIs.<br><br>
+          I believe good software should be both functional and beautiful. This wiki is my digital space to document my journey, share projects, and connect with others.
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="animation:cardIn .4s ease .12s both;">
+      <div class="wiki-card">
+        <div class="wiki-card-header">Education</div>
+        <div class="wiki-card-body">
+          <div class="info-row"><span class="info-key">degree</span><span class="info-val">Computer Engineering</span></div>
+          <div class="info-row"><span class="info-key">status</span><span class="info-val" style="color:var(--green)">In Progress</span></div>
+          <div class="info-row"><span class="info-key">focus</span><span class="info-val">Systems & Security</span></div>
+        </div>
+      </div>
+      <div class="wiki-card">
+        <div class="wiki-card-header">Interests</div>
+        <div class="wiki-card-body">
+          <div class="tag-row" style="flex-direction:column;gap:6px;">
+            <div><span class="wiki-tag tag-cyan">Web Development</span></div>
+            <div><span class="wiki-tag tag-gold">Machine Learning</span></div>
+            <div><span class="wiki-tag tag-green">Cybersecurity</span></div>
+            <div><span class="wiki-tag tag-purple">UI/UX Design</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PROJECTS PAGE ===== -->
+  <div class="page hidden" id="page-projects">
+    <div class="page-header">
+      <h1 class="page-title">// PROJECTS</h1>
+      <div class="page-header-line"></div>
+      <div class="proj-filter-row">
+        <button class="proj-filter active" data-filter="all" onclick="filterProjects('all')">ALL</button>
+        <button class="proj-filter" data-filter="web" onclick="filterProjects('web')">WEB</button>
+        <button class="proj-filter" data-filter="ml" onclick="filterProjects('ml')">ML</button>
+        <button class="proj-filter" data-filter="wip" onclick="filterProjects('wip')">WIP</button>
+      </div>
+    </div>
+
+    <div class="wiki-card" style="margin-bottom:14px;animation:cardIn .4s ease both;">
+      <div class="wiki-card-header">Project Index</div>
+      <div class="wiki-card-body" id="projects-list">
+        <div class="project-entry" data-tags="web wip">
+          <span class="proj-num">01</span>
+          <div class="proj-info">
+            <p class="proj-name">VonnieStudio Wiki</p>
+            <p class="proj-desc">HTML/CSS/JS · Personal wiki &amp; portfolio site with retro cyber aesthetic</p>
+            <div class="tag-row" style="margin-top:6px;">
+              <span class="wiki-tag tag-cyan">HTML</span>
+              <span class="wiki-tag tag-cyan">CSS</span>
+              <span class="wiki-tag tag-cyan">JavaScript</span>
+            </div>
+          </div>
+          <span class="proj-badge badge-wip">WIP</span>
+        </div>
+        <div class="proj-empty-hint">
+          <span class="proj-empty-text">// More projects coming soon...</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="wiki-card" style="animation:cardIn .4s ease .08s both;">
+      <div class="wiki-card-header">Tech Stack</div>
+      <div class="wiki-card-body">
+        <div class="stack-grid">
+          <div class="stack-item"><i class="fa-brands fa-html5" style="color:#e34c26"></i><span>HTML5</span></div>
+          <div class="stack-item"><i class="fa-brands fa-css3-alt" style="color:#264de4"></i><span>CSS3</span></div>
+          <div class="stack-item"><i class="fa-brands fa-js" style="color:#f7df1e"></i><span>JavaScript</span></div>
+          <div class="stack-item"><i class="fa-brands fa-react" style="color:var(--cyan)"></i><span>React</span></div>
+          <div class="stack-item"><i class="fa-brands fa-python" style="color:#3572A5"></i><span>Python</span></div>
+          <div class="stack-item"><i class="fa-solid fa-brain" style="color:var(--purple)"></i><span>ML / AI</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CONTACT PAGE ===== -->
+  <div class="page hidden" id="page-contact">
+    <div class="page-header">
+      <h1 class="page-title">// CONTACT</h1>
+      <div class="page-header-line"></div>
+    </div>
+
+    <div class="wiki-banner" style="animation:cardIn .4s ease both;margin-bottom:14px;">
+      <div class="banner-eyebrow">// CONTACT_VONNIE.DAT</div>
+      <div class="banner-title" style="font-size:16px;">Get In Touch</div>
+      <div class="banner-divider"></div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--text-sub);margin-top:8px;">
+        Open to collaboration, questions, or just saying hi.
+      </div>
+    </div>
+
+    <div class="wiki-card" style="margin-bottom:14px;animation:cardIn .4s ease .06s both;">
+      <div class="wiki-card-header">Social Channels</div>
+      <div class="wiki-card-body" id="contact-social-grid"></div>
+    </div>
+
+    <div class="wiki-card" style="margin-bottom:14px;animation:cardIn .4s ease .1s both;">
+      <div class="wiki-card-header">Availability</div>
+      <div class="wiki-card-body">
+        <div class="info-row"><span class="info-key">collabs</span><span class="info-val" style="color:var(--green)">Open</span></div>
+        <div class="info-row"><span class="info-key">response</span><span class="info-val">Within a few days</span></div>
+        <div class="info-row"><span class="info-key">timezone</span><span class="info-val">ICT (UTC+7)</span></div>
+        <div class="info-row"><span class="info-key">best via</span><span class="info-val hl">Discord / YouTube</span></div>
+      </div>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<footer class="wiki-footer">
+  <span>// VonnieStudio Wiki · Personal wiki</span>
+  <span>Last edited: March 2026</span>
+</footer>
+
+</div><!-- end #app -->
+
+<!-- LINK CONFIRM MODAL -->
+<div id="link-modal" class="link-modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="link-modal-box">
+    <div class="link-modal-header">// LINK_VERIFY.EXE</div>
+    <div class="link-modal-body">
+      <div class="link-modal-label">Open link to <span id="modal-name"></span></div>
+      <div class="link-modal-url" id="modal-url"></div>
+      <div class="link-modal-warn">Check that the link is correct before proceeding</div>
+      <div class="link-modal-actions">
+        <button class="link-btn-cancel" onclick="closeModal()">[ CANCEL ]</button>
+        <button class="link-btn-confirm" id="modal-confirm">[ CONFIRM ]</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- COMMUNITY -->
-<div class="community-screen" id="communityScreen">
-  <nav class="comm-nav">
-    <a href="index.html" class="comm-back-btn"><i class="fa-solid fa-chevron-left" style="font-size:9px;"></i> WIKI</a>
-    <div class="comm-nav-title">VONNIESTUDIO <span>// COMMUNITY</span></div>
-    <div class="comm-nav-user">
-      <div class="comm-avatar" id="navAvatar" onclick="openProfile()" title="Edit Profile">?</div>
-      <span id="navUsername">---</span>
-      <button class="comm-logout-btn" onclick="handleLogout()">[ LOGOUT ]</button>
+<!-- SHARE MODAL -->
+<div id="share-modal" class="share-modal-overlay" onclick="if(event.target===this)closeShare()">
+  <div class="share-modal-box">
+    <div class="share-modal-header">
+      <span>// SHARE_PAGE.EXE</span>
+      <button class="share-modal-close" onclick="closeShare()">[ X ]</button>
     </div>
-  </nav>
-
-  <div class="community-body">
-    <!-- SIDEBAR -->
-    <aside class="comm-sidebar">
-      <div class="sidebar-tabs">
-        <button class="sidebar-tab active" onclick="switchSidebarTab('channels')">CHANNELS</button>
-        <button class="sidebar-tab" onclick="switchSidebarTab('server')">SERVER</button>
-      </div>
-
-      <!-- CHANNELS PANEL -->
-      <div class="sidebar-panel active" id="panelChannels">
-        <div class="comm-sidebar-label">Channels</div>
-        <div id="roomList"></div>
-      </div>
-
-      <!-- SERVER PANEL -->
-      <div class="sidebar-panel" id="panelServer">
-        <div class="server-stat-block">
-          <div class="server-stat-label">// STATUS</div>
-          <div class="server-stat-val"><span class="server-status-dot online"></span>ONLINE</div>
-          <div class="server-stat-sub" id="serverUptime">uptime: 0s</div>
-        </div>
-        <div class="server-stat-block">
-          <div class="server-stat-label">// USERS ONLINE</div>
-          <div class="server-stat-val" id="onlineCount">0</div>
-          <div class="server-stat-sub">currently active</div>
-        </div>
-        <div class="server-stat-block">
-          <div class="server-stat-label">// TOTAL MEMBERS</div>
-          <div class="server-stat-val" id="totalMembers">—</div>
-          <div class="server-stat-sub">registered accounts</div>
-        </div>
-        <div class="comm-sidebar-label" style="margin-top:4px;">Online Now</div>
-        <div id="onlineList"></div>
-      </div>
-    </aside>
-
-    <!-- CHAT -->
-    <div class="comm-chat">
-      <div class="comm-chat-header">
-        <span class="comm-chat-room-name" id="chatRoomName">#general</span>
-        <span>— VonnieStudio Community</span>
-      </div>
-
-      <div class="img-preview-wrap" id="imgPreviewWrap">
-        <img class="img-preview-thumb" id="imgPreviewThumb" src="" alt="">
-        <span class="img-preview-name" id="imgPreviewName"></span>
-        <button class="img-preview-remove" onclick="removeImage()">[ ✕ REMOVE ]</button>
-      </div>
-
-      <div class="comm-messages" id="commMessages">
-        <div class="comm-empty" id="commEmpty">
-          <i class="fa-solid fa-terminal" style="font-size:20px;color:rgba(0,212,255,.2);"></i>
-          <span>// No messages yet — be the first!</span>
-        </div>
-      </div>
-
-      <!-- REPLY BAR -->
-      <div class="reply-bar" id="replyBar">
-        <div class="reply-bar-line"></div>
-        <div class="reply-bar-body">
-          <div class="reply-bar-to" id="replyBarTo">Replying to @---</div>
-          <div class="reply-bar-preview" id="replyBarPreview">---</div>
-        </div>
-        <button class="reply-bar-close" onclick="cancelReply()" title="Cancel reply">✕</button>
-      </div>
-
-      <div class="comm-input-bar">
-        <button class="comm-img-btn" onclick="document.getElementById('imgFileInput').click()" title="Attach image">
-          <i class="fa-solid fa-image"></i>
+    <div class="share-modal-body">
+      <div class="share-label">PAGE URL</div>
+      <div class="share-url-box" id="share-url-display"></div>
+      <div class="share-label" style="margin-top:4px;">SHARE VIA</div>
+      <div class="share-actions">
+        <button class="share-btn share-btn-copy" onclick="shareAction('copy')">
+          <i class="fa-solid fa-copy"></i>[ COPY URL ]
         </button>
-        <input type="file" id="imgFileInput" accept="image/*" style="display:none" onchange="handleImageSelect(event)">
-        <div class="comm-input-wrap">
-          <div class="fmt-toolbar">
-            <button class="fmt-btn" onclick="insertFmt('**','**')" title="Bold"><b>B</b></button>
-            <button class="fmt-btn" onclick="insertFmt('*','*')" title="Italic"><i>I</i></button>
-            <span class="fmt-hint">**bold** *italic* · Shift+Enter = new line</span>
-          </div>
-          <textarea class="comm-input" id="commInput"
-            placeholder="Type a message..."
-            autocomplete="off" maxlength="500" rows="1"
-            oninput="onInputChange(this)"
-            onkeydown="handleInputKey(event)"></textarea>
-          <div class="char-counter" id="charCounter"></div>
-        </div>
-        <button class="comm-send-btn" id="sendBtn" onclick="sendMessage()">[ SEND ]</button>
+        <button class="share-btn share-btn-x" onclick="shareAction('x')">
+          <i class="fa-brands fa-x-twitter"></i>[ SHARE ON X ]
+        </button>
+        <button class="share-btn share-btn-native" onclick="shareAction('native')" id="share-native-btn">
+          <i class="fa-solid fa-share-nodes"></i>[ SHARE (DEVICE) ]
+        </button>
       </div>
+      <div class="share-toast" id="share-toast"></div>
     </div>
   </div>
 </div>
 
-<!-- LIGHTBOX -->
-<div class="lightbox" id="lightbox" onclick="closeLightbox()">
-  <button class="lightbox-close" onclick="closeLightbox()">[ ✕ CLOSE ]</button>
-  <img id="lightboxImg" src="" alt="">
-</div>
-
-<!-- EMOJI PICKER -->
-<div class="emoji-picker" id="emojiPicker">
-  <div class="emoji-picker-label">// REACT</div>
-  <button class="emoji-opt" onclick="pickEmoji('👍')">👍</button>
-  <button class="emoji-opt" onclick="pickEmoji('❤️')">❤️</button>
-  <button class="emoji-opt" onclick="pickEmoji('😂')">😂</button>
-  <button class="emoji-opt" onclick="pickEmoji('😮')">😮</button>
-  <button class="emoji-opt" onclick="pickEmoji('😢')">😢</button>
-  <button class="emoji-opt" onclick="pickEmoji('🔥')">🔥</button>
-  <button class="emoji-opt" onclick="pickEmoji('👀')">👀</button>
-  <button class="emoji-opt" onclick="pickEmoji('✅')">✅</button>
-  <button class="emoji-opt" onclick="pickEmoji('💯')">💯</button>
-  <button class="emoji-opt" onclick="pickEmoji('🎉')">🎉</button>
-  <button class="emoji-opt" onclick="pickEmoji('💀')">💀</button>
-  <button class="emoji-opt" onclick="pickEmoji('🤔')">🤔</button>
-</div>
-
-<!-- PROFILE MODAL -->
-<div class="profile-modal-overlay" id="profileModal" onclick="if(event.target===this)closeProfile()">
-  <div class="profile-modal-box">
-    <div class="profile-modal-header">
-      <span>// PROFILE_EDITOR.EXE</span>
-      <button class="profile-modal-close" onclick="closeProfile()">[ X ]</button>
-    </div>
-    <div class="profile-modal-body">
-      <div class="profile-preview">
-        <div class="profile-preview-avatar" id="previewAvatar">?</div>
-        <div class="profile-preview-info">
-          <div class="profile-preview-name" id="previewName">---</div>
-          <div class="profile-preview-role">Community Member</div>
-        </div>
-      </div>
-      <div class="profile-section-label">// AVATAR IMAGE</div>
-      <input type="file" id="avatarFileInput" accept="image/*" style="display:none" onchange="handleAvatarSelect(event)">
-
-      <!-- Upload zone (shown when no image picked) -->
-      <div class="avatar-upload-zone" id="avatarUploadZone" onclick="document.getElementById('avatarFileInput').click()">
-        <div id="avatarUploadContent">
-          <div class="avatar-upload-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
-          <div class="avatar-upload-text">Click or drag to upload</div>
-          <div class="avatar-upload-sub">PNG, JPG, GIF · max 2MB</div>
-        </div>
-        <div id="avatarPreviewContent" style="display:none">
-          <div class="avatar-upload-preview"><img id="avatarPreviewImg" src="" alt="preview"></div>
-          <button class="avatar-upload-change" onclick="event.stopPropagation();document.getElementById('avatarFileInput').click()">[ CHANGE IMAGE ]</button>
-        </div>
-      </div>
-
-      <!-- Crop editor (shown after image picked, before apply) -->
-      <div class="crop-editor" id="cropEditor">
-        <div class="crop-canvas-wrap" id="cropWrap">
-          <canvas id="cropCanvas" width="240" height="240"></canvas>
-          <svg class="crop-overlay" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
-            <!-- Dark mask outside circle -->
-            <defs>
-              <mask id="circleMask">
-                <rect width="240" height="240" fill="white"/>
-                <circle cx="120" cy="120" r="108" fill="black"/>
-              </mask>
-            </defs>
-            <rect width="240" height="240" fill="rgba(0,0,0,0.6)" mask="url(#circleMask)"/>
-            <!-- Circle border -->
-            <circle cx="120" cy="120" r="108" fill="none" stroke="rgba(0,212,255,0.8)" stroke-width="1.5"/>
-            <!-- Corner marks -->
-            <line x1="0" y1="120" x2="12" y2="120" stroke="rgba(0,212,255,0.4)" stroke-width="1"/>
-            <line x1="228" y1="120" x2="240" y2="120" stroke="rgba(0,212,255,0.4)" stroke-width="1"/>
-            <line x1="120" y1="0" x2="120" y2="12" stroke="rgba(0,212,255,0.4)" stroke-width="1"/>
-            <line x1="120" y1="228" x2="120" y2="240" stroke="rgba(0,212,255,0.4)" stroke-width="1"/>
-          </svg>
-        </div>
-        <div class="crop-controls">
-          <div class="crop-zoom-row">
-            <span class="crop-zoom-label">ZOOM</span>
-            <input type="range" class="crop-zoom-slider" id="cropZoom" min="0.5" max="3" step="0.01" value="1">
-            <span class="crop-zoom-val" id="cropZoomVal">1.0×</span>
-          </div>
-          <div class="crop-actions">
-            <button class="crop-cancel-btn" onclick="cancelCrop()">[ CANCEL ]</button>
-            <button class="crop-apply-btn" onclick="applyCrop()">[ APPLY CROP ]</button>
-          </div>
-        </div>
-      </div>
-
-      <button class="profile-save-btn" id="profileSaveBtn" onclick="saveProfile()">[ SAVE CHANGES ]</button>
-      <div class="profile-save-msg" id="profileSaveMsg"></div>
-    </div>
-  </div>
-</div>
-
-<script type="module">
-import { supabase, signIn, signUp, signOut, getSession, getProfile } from './supabase.js';
-
-// ============================================================
-//  STATE
-// ============================================================
-let currentUser     = null;
-let currentProfile  = null;
-let currentRoomId   = null;
-let realtimeSub     = null;
-let presenceSub     = null;
-let selectedFile    = null;
-let selectedColor   = null;
-let selectedAvatarFile = null;
-let serverStart     = Date.now();
-
-// Reply state
-let replyingTo      = null; // { id, username, content }
-// Emoji picker state
-let emojiTargetMsgId = null;
-
-// ============================================================
-//  INIT
-// ============================================================
-async function init() {
-  startAuthClock();
-  startServerUptime();
-  const session = await getSession();
-  if (session) {
-    currentUser = session.user;
-    const { data } = await getProfile(currentUser.id);
-    currentProfile = data;
-    showCommunity();
-  } else {
-    showAuth();
-  }
-}
-
-function showAuth() {
-  document.getElementById('commLoading').style.display = 'none';
-  document.getElementById('authScreen').style.display = 'flex';
-}
-
-async function showCommunity() {
-  document.getElementById('commLoading').style.display = 'none';
-  document.getElementById('authScreen').style.display = 'none';
-  document.getElementById('communityScreen').classList.add('show');
-  updateNavAvatar();
-  await loadRooms();
-  await loadTotalMembers();
-  initPresence();
-}
-
-// ============================================================
-//  AVATAR HELPER
-// ============================================================
-function setAvatarEl(el, avatarUrl, color, letter) {
-  if (avatarUrl) {
-    el.style.background = 'transparent';
-    el.innerHTML = `<img src="${avatarUrl}" alt="avatar" style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;">`;
-  } else {
-    el.style.background = color || '#00d4ff';
-    el.textContent = letter || '?';
-  }
-}
-
-function updateNavAvatar() {
-  const color   = currentProfile?.avatar_color || '#00d4ff';
-  const uname   = currentProfile?.username || 'user';
-  const avatarUrl = currentProfile?.avatar_url || null;
-  document.getElementById('navUsername').textContent = uname;
-  const av = document.getElementById('navAvatar');
-  setAvatarEl(av, avatarUrl, color, uname[0].toUpperCase());
-}
-
-// ============================================================
-//  AUTH CLOCK
-// ============================================================
-function startAuthClock() {
-  const tick = () => {
-    const now = new Date();
-    const el = document.getElementById('authTime');
-    if (el) el.textContent = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
-  };
-  tick(); setInterval(tick, 30000);
-}
-
-// ============================================================
-//  SERVER UPTIME
-// ============================================================
-function startServerUptime() {
-  setInterval(() => {
-    const s = Math.floor((Date.now() - serverStart) / 1000);
-    const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
-    const el = document.getElementById('serverUptime');
-    if (el) el.textContent = `uptime: ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
-  }, 1000);
-}
-
-// ============================================================
-//  TOTAL MEMBERS
-// ============================================================
-async function loadTotalMembers() {
-  const { count } = await supabase
-    .from('profiles')
-    .select('*', { count: 'exact', head: true });
-  const el = document.getElementById('totalMembers');
-  if (el) el.textContent = count ?? '—';
-}
-
-// ============================================================
-//  ONLINE PRESENCE
-// ============================================================
-function initPresence() {
-  if (presenceSub) supabase.removeChannel(presenceSub);
-  const uname = currentProfile?.username || 'user';
-  const color = currentProfile?.avatar_color || '#00d4ff';
-
-  presenceSub = supabase.channel('community-presence')
-    .on('presence', { event: 'sync' }, () => {
-      const state = presenceSub.presenceState();
-      const users = Object.values(state).flat();
-      updateOnlineUI(users);
-    })
-    .subscribe(async (status) => {
-      if (status === 'SUBSCRIBED') {
-        await presenceSub.track({ user_id: currentUser.id, username: uname, color });
-      }
-    });
-}
-
-function updateOnlineUI(users) {
-  const countEl = document.getElementById('onlineCount');
-  const listEl  = document.getElementById('onlineList');
-  if (countEl) countEl.textContent = users.length;
-  if (!listEl) return;
-  listEl.innerHTML = '';
-  users.forEach(u => {
-    const isMe = u.user_id === currentUser?.id;
-    const div = document.createElement('div');
-    div.className = 'online-user-item';
-    div.innerHTML = `<div class="online-user-dot"></div>
-      <span class="online-user-name" style="color:${u.color||'var(--cyan)'}">${escHtml(u.username||'user')}</span>
-      ${isMe ? '<span class="online-you">(you)</span>' : ''}`;
-    listEl.appendChild(div);
-  });
-}
-
-// ============================================================
-//  SIDEBAR TABS
-// ============================================================
-window.switchSidebarTab = function(tab) {
-  document.querySelectorAll('.sidebar-tab').forEach((t,i) => {
-    t.classList.toggle('active', (i===0&&tab==='channels')||(i===1&&tab==='server'));
-  });
-  document.getElementById('panelChannels').classList.toggle('active', tab==='channels');
-  document.getElementById('panelServer').classList.toggle('active', tab==='server');
-};
-
-// ============================================================
-//  AUTH TAB
-// ============================================================
-window.switchTab = function(tab) {
-  document.getElementById('formLogin').style.display    = tab==='login' ? '' : 'none';
-  document.getElementById('formRegister').style.display = tab==='register' ? '' : 'none';
-  document.getElementById('tabLogin').classList.toggle('active', tab==='login');
-  document.getElementById('tabRegister').classList.toggle('active', tab==='register');
-  clearAuthMessages();
-};
-function clearAuthMessages() {
-  ['authError','authSuccess'].forEach(id => {
-    const el = document.getElementById(id);
-    el.classList.remove('show'); el.textContent = '';
-  });
-}
-function showError(msg) {
-  const el = document.getElementById('authError');
-  el.textContent = '// ERROR: ' + msg; el.classList.add('show');
-}
-function showSuccess(msg) {
-  const el = document.getElementById('authSuccess');
-  el.textContent = msg; el.classList.add('show');
-}
-
-// ============================================================
-//  LOGIN / REGISTER / LOGOUT
-// ============================================================
-window.handleLogin = async function() {
-  clearAuthMessages();
-  const email = document.getElementById('loginEmail').value.trim();
-  const password = document.getElementById('loginPassword').value;
-  const btn = document.getElementById('loginBtn');
-  if (!email || !password) return showError('Complete information');
-  btn.disabled = true; btn.textContent = '[ CONNECTING... ]';
-  const { data, error } = await signIn(email, password);
-  if (error) {
-    showError(error.message === 'Invalid login credentials' ? 'Email or Password incorrect' : error.message);
-    btn.disabled = false; btn.textContent = '[ LOGIN → ]'; return;
-  }
-  currentUser = data.user;
-  const { data: profile } = await getProfile(currentUser.id);
-  currentProfile = profile;
-  showCommunity();
-};
-document.getElementById('loginPassword').addEventListener('keydown', e => { if(e.key==='Enter') handleLogin(); });
-
-window.handleRegister = async function() {
-  clearAuthMessages();
-  const username = document.getElementById('regUsername').value.trim();
-  const email    = document.getElementById('regEmail').value.trim();
-  const password = document.getElementById('regPassword').value;
-  const btn = document.getElementById('registerBtn');
-  if (!username||!email||!password) return showError('Complete information');
-  if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) return showError('Username: letters/numbers/underscores, 3-20 chars');
-  if (password.length < 8) return showError('Password must be at least 8 characters');
-  btn.disabled = true; btn.textContent = '[ CREATING... ]';
-  const { error } = await signUp(email, password, username);
-  if (error) { showError(error.message); btn.disabled = false; btn.textContent = '[ CREATE ACCOUNT → ]'; return; }
-  showSuccess('✓ Check your email to verify, then login');
-  btn.disabled = false; btn.textContent = '[ CREATE ACCOUNT → ]';
-};
-
-window.handleLogout = async function() {
-  if (realtimeSub) supabase.removeChannel(realtimeSub);
-  if (presenceSub) supabase.removeChannel(presenceSub);
-  await signOut();
-  currentUser = currentProfile = currentRoomId = null;
-  document.getElementById('communityScreen').classList.remove('show');
-  document.getElementById('commMessages').innerHTML = '';
-  showAuth();
-};
-
-// ============================================================
-//  ROOMS
-// ============================================================
-async function loadRooms() {
-  const { data } = await supabase.from('rooms').select('*').order('created_at');
-  if (!data) return;
-  const list = document.getElementById('roomList');
-  list.innerHTML = '';
-  data.forEach((room, i) => {
-    const div = document.createElement('div');
-    div.className = 'room-item' + (i===0 ? ' active' : '');
-    div.innerHTML = `<span class="room-item-hash">#</span><span>${room.name.replace('#','')}</span>`;
-    div.onclick = () => selectRoom(room, div);
-    list.appendChild(div);
-    if (i===0) selectRoom(room, div, true);
-  });
-}
-
-async function selectRoom(room, el, silent=false) {
-  currentRoomId = room.id;
-  document.getElementById('chatRoomName').textContent = room.name;
-  document.querySelectorAll('.room-item').forEach(r => r.classList.remove('active'));
-  if (el) el.classList.add('active');
-  if (!silent) document.getElementById('commMessages').innerHTML = '';
-  await loadMessages();
-  subscribeRealtime();
-}
-
-// ============================================================
-//  MESSAGES
-// ============================================================
-async function loadMessages() {
-  const { data } = await supabase
-    .from('messages').select('*')
-    .eq('room_id', currentRoomId)
-    .order('created_at', { ascending: true }).limit(100);
-
-  const container = document.getElementById('commMessages');
-  container.innerHTML = '';
-
-  if (!data || !data.length) {
-    container.innerHTML = `<div class="comm-empty">
-      <i class="fa-solid fa-terminal" style="font-size:20px;color:rgba(0,212,255,.2);"></i>
-      <span>// No messages yet — be the first!</span></div>`;
-    return;
-  }
-
-  const msgIds  = data.map(m => m.id);
-  const userIds = [...new Set(data.map(m => m.user_id).filter(Boolean))];
-
-  // Fetch profiles
-  const { data: profiles } = await supabase
-    .from('profiles').select('id, username, avatar_color, avatar_url').in('id', userIds);
-  const profileMap = {};
-  (profiles||[]).forEach(p => { profileMap[p.id] = p; });
-
-  // Fetch reactions for all messages in this batch
-  const { data: allReactions } = await supabase
-    .from('reactions').select('*').in('message_id', msgIds);
-  const reactionMap = {};
-  (allReactions||[]).forEach(r => {
-    if (!reactionMap[r.message_id]) reactionMap[r.message_id] = [];
-    reactionMap[r.message_id].push(r);
-  });
-
-  // Fetch reply_to messages (for messages that are replies)
-  const replyIds = [...new Set(data.map(m => m.reply_to_id).filter(Boolean))];
-  const replyMap = {};
-  if (replyIds.length) {
-    const { data: replyMsgs } = await supabase
-      .from('messages').select('id, content, user_id').in('id', replyIds);
-    // Also need profile for reply authors
-    const replyUserIds = [...new Set((replyMsgs||[]).map(m => m.user_id).filter(Boolean))];
-    let replyProfiles = [];
-    if (replyUserIds.length) {
-      const { data: rp } = await supabase
-        .from('profiles').select('id, username').in('id', replyUserIds);
-      replyProfiles = rp || [];
-    }
-    const replyProfileMap = {};
-    replyProfiles.forEach(p => { replyProfileMap[p.id] = p; });
-    (replyMsgs||[]).forEach(m => {
-      replyMap[m.id] = { ...m, username: replyProfileMap[m.user_id]?.username || 'unknown' };
-    });
-  }
-
-  data.forEach(msg => {
-    msg.profiles  = profileMap[msg.user_id] || null;
-    msg.reactions = reactionMap[msg.id]     || [];
-    msg.replyTo   = msg.reply_to_id ? replyMap[msg.reply_to_id] || null : null;
-    renderMessage(msg);
-  });
-  scrollToBottom();
-}
-
-function formatText(raw) {
-  return escHtml(raw)
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g,     '<em>$1</em>')
-    .replace(/\n/g, '<br>');
-}
-
-function renderMessage(msg) {
-  const container = document.getElementById('commMessages');
-  const empty = document.getElementById('commEmpty');
-  if (empty) empty.remove();
-
-  const isOwn     = msg.user_id === currentUser?.id;
-  const username  = msg.profiles?.username || 'unknown';
-  const color     = msg.profiles?.avatar_color || '#00d4ff';
-  const avatarUrl = msg.profiles?.avatar_url || null;
-  const initial   = username[0].toUpperCase();
-  const time      = new Date(msg.created_at).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
-  const reactions = msg.reactions || [];
-  const replyTo   = msg.replyTo   || null;
-
-  const group = document.createElement('div');
-  group.className = 'msg-group';
-  group.dataset.msgId = msg.id;
-
-  // Avatar
-  const avatarInner = avatarUrl
-    ? `<img src="${avatarUrl}" alt="avatar" style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;">`
-    : initial;
-  const avatarStyle = avatarUrl ? 'background:transparent;' : `background:${color};`;
-
-  // Reply quote block
-  let replyHtml = '';
-  if (replyTo) {
-    const preview = replyTo.content ? escHtml(replyTo.content).substring(0, 80) : '[image]';
-    replyHtml = `<div class="msg-reply-quote" onclick="scrollToMessage('${replyTo.id}')">
-      <span class="msg-reply-author">↩ @${escHtml(replyTo.username)}</span>
-      <span class="msg-reply-text">${preview}</span>
-    </div>`;
-  }
-
-  // Hover action buttons
-  const actionsHtml = `<div class="msg-actions">
-    <button class="msg-action-btn" title="React" onclick="openEmojiPicker(event,'${msg.id}')">😊</button>
-    <button class="msg-action-btn reply-btn" title="Reply" onclick="setReply('${msg.id}','${escHtml(username)}',${JSON.stringify(msg.content||'')})">↩ reply</button>
-    ${isOwn ? `<button class="msg-action-btn" title="Delete" onclick="deleteMessage('${msg.id}')" style="color:rgba(255,107,107,.5);" onmouseover="this.style.color='#ff6b6b'" onmouseout="this.style.color='rgba(255,107,107,.5)'">✕</button>` : ''}
-  </div>`;
-
-  // Message header
-  let html = `${actionsHtml}${replyHtml}
-  <div class="msg-header">
-    <div class="msg-avatar" style="${avatarStyle}">${avatarInner}</div>
-    <span class="msg-username">${escHtml(username)}</span>
-    <span class="msg-time" title="${dateStr}">${time} · ${dateStr}</span>
-  </div>`;
-
-  if (msg.content) {
-    html += `<div class="msg-bubble${isOwn?' own':''}">${formatText(msg.content)}</div>`;
-  }
-  if (msg.image_url) {
-    html += `<img class="msg-img" src="${msg.image_url}" alt="image" onclick="openLightbox('${msg.image_url}')">`;
-  }
-
-  // Reactions area (always present so it can be updated)
-  html += `<div class="msg-reactions" id="reactions-${msg.id}"></div>`;
-
-  group.innerHTML = html;
-  container.appendChild(group);
-
-  // Render reaction pills
-  renderReactions(msg.id, reactions);
-}
-
-function renderReactions(msgId, reactions) {
-  const el = document.getElementById('reactions-' + msgId);
-  if (!el) return;
-  // Group by emoji
-  const grouped = {};
-  reactions.forEach(r => {
-    if (!grouped[r.emoji]) grouped[r.emoji] = [];
-    grouped[r.emoji].push(r.user_id);
-  });
-  el.innerHTML = '';
-  Object.entries(grouped).forEach(([emoji, userIds]) => {
-    const mine = userIds.includes(currentUser?.id);
-    const pill = document.createElement('button');
-    pill.className = 'reaction-pill' + (mine ? ' mine' : '');
-    pill.title = `${userIds.length} reaction${userIds.length>1?'s':''}`;
-    pill.innerHTML = `<span class="reaction-emoji">${emoji}</span><span class="reaction-count">${userIds.length}</span>`;
-    pill.onclick = () => toggleReaction(msgId, emoji);
-    el.appendChild(pill);
-  });
-}
-
-function escHtml(str) {
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-function scrollToBottom() {
-  const c = document.getElementById('commMessages');
-  c.scrollTop = c.scrollHeight;
-}
-
-// ============================================================
-//  SEND
-// ============================================================
-window.sendMessage = async function() {
-  const input   = document.getElementById('commInput');
-  const content = input.value.trim();
-  const btn     = document.getElementById('sendBtn');
-
-  if (!content && !selectedFile) return;
-  if (!currentRoomId) return;
-
-  btn.disabled = true;
-  let image_url = null;
-
-  if (selectedFile) {
-    const ext = selectedFile.name.split('.').pop();
-    const filename = `${currentUser.id}/${Date.now()}.${ext}`;
-    const { data: up, error: upErr } = await supabase.storage
-      .from('community-images').upload(filename, selectedFile, { cacheControl:'3600', upsert:false });
-    if (!upErr) {
-      const { data: urlData } = supabase.storage.from('community-images').getPublicUrl(filename);
-      image_url = urlData.publicUrl;
-    }
-    removeImage();
-  }
-
-  const msgData = {
-    user_id: currentUser.id,
-    room_id: currentRoomId,
-    content: content || null,
-    image_url,
-    reply_to_id: replyingTo ? replyingTo.id : null
-  };
-
-  const { error } = await supabase.from('messages').insert(msgData);
-
-  if (!error) {
-    input.value = '';
-    input.style.height = 'auto';
-    document.getElementById('charCounter').textContent = '';
-    cancelReply();
-    await loadMessages();
-  }
-  btn.disabled = false;
-  input.focus();
-};
-
-window.deleteMessage = async function(id) {
-  await supabase.from('messages').delete().eq('id', id);
-  const el = document.querySelector(`[data-msg-id="${id}"]`);
-  if (el) el.remove();
-};
-
-// ============================================================
-//  INPUT HANDLING
-// ============================================================
-window.handleInputKey = function(e) {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage();
-  }
-  // Shift+Enter → new line (default textarea behavior, no need to prevent)
-};
-
-window.onInputChange = function(el) {
-  // Auto-grow
-  el.style.height = 'auto';
-  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
-  // Char counter
-  const len = el.value.length;
-  const remaining = 500 - len;
-  const counter = document.getElementById('charCounter');
-  if (remaining <= 50) {
-    counter.textContent = remaining + ' chars left';
-    counter.className = 'char-counter ' + (remaining <= 20 ? 'danger' : 'warn');
-  } else {
-    counter.textContent = '';
-    counter.className = 'char-counter';
-  }
-};
-
-window.insertFmt = function(before, after) {
-  const input = document.getElementById('commInput');
-  const start = input.selectionStart;
-  const end   = input.selectionEnd;
-  const sel   = input.value.substring(start, end);
-  const replacement = before + (sel || 'text') + after;
-  input.value = input.value.substring(0, start) + replacement + input.value.substring(end);
-  // position cursor
-  const pos = sel ? start + replacement.length : start + before.length;
-  input.setSelectionRange(pos, pos + (sel ? 0 : 4));
-  input.focus();
-  onInputChange(input);
-};
-
-// ============================================================
-//  REALTIME
-// ============================================================
-function subscribeRealtime() {
-  if (realtimeSub) supabase.removeChannel(realtimeSub);
-
-  realtimeSub = supabase.channel('room-' + currentRoomId)
-    // New messages
-    .on('postgres_changes', { event:'INSERT', schema:'public', table:'messages', filter:`room_id=eq.${currentRoomId}` },
-      async (payload) => {
-        const msg = payload.new;
-        // Fetch profile
-        const { data: profile } = await supabase.from('profiles')
-          .select('id, username, avatar_color, avatar_url').eq('id', msg.user_id).single();
-        // Fetch reply_to if any
-        let replyTo = null;
-        if (msg.reply_to_id) {
-          const { data: rMsg } = await supabase.from('messages')
-            .select('id, content, user_id').eq('id', msg.reply_to_id).single();
-          if (rMsg) {
-            const { data: rp } = await supabase.from('profiles')
-              .select('username').eq('id', rMsg.user_id).single();
-            replyTo = { ...rMsg, username: rp?.username || 'unknown' };
-          }
-        }
-        renderMessage({ ...msg, profiles: profile||null, reactions: [], replyTo });
-        scrollToBottom();
-      })
-    // Reaction added
-    .on('postgres_changes', { event:'INSERT', schema:'public', table:'reactions' },
-      async (payload) => {
-        const r = payload.new;
-        const el = document.getElementById('reactions-' + r.message_id);
-        if (!el) return;
-        await refreshReactions(r.message_id);
-      })
-    // Reaction removed
-    .on('postgres_changes', { event:'DELETE', schema:'public', table:'reactions' },
-      async (payload) => {
-        const r = payload.old;
-        const el = document.getElementById('reactions-' + r.message_id);
-        if (!el) return;
-        await refreshReactions(r.message_id);
-      })
-    .subscribe();
-}
-
-async function refreshReactions(msgId) {
-  const { data } = await supabase.from('reactions').select('*').eq('message_id', msgId);
-  renderReactions(msgId, data || []);
-}
-
-// ============================================================
-//  REACTIONS
-// ============================================================
-window.toggleReaction = async function(msgId, emoji) {
-  // Check if current user already reacted with this emoji
-  const { data: existing } = await supabase.from('reactions')
-    .select('id').eq('message_id', msgId).eq('user_id', currentUser.id).eq('emoji', emoji).maybeSingle();
-
-  if (existing) {
-    await supabase.from('reactions').delete().eq('id', existing.id);
-  } else {
-    await supabase.from('reactions').insert({ message_id: msgId, user_id: currentUser.id, emoji });
-  }
-  // Optimistic refresh (realtime will also fire)
-  await refreshReactions(msgId);
-};
-
-// ============================================================
-//  EMOJI PICKER
-// ============================================================
-window.openEmojiPicker = function(e, msgId) {
-  e.stopPropagation();
-  const picker = document.getElementById('emojiPicker');
-  emojiTargetMsgId = msgId;
-  // Position near the button
-  const rect = e.currentTarget.getBoundingClientRect();
-  const pickerW = 220, pickerH = 120;
-  let top  = rect.bottom + 6;
-  let left = rect.left;
-  if (left + pickerW > window.innerWidth)  left = window.innerWidth - pickerW - 8;
-  if (top  + pickerH > window.innerHeight) top  = rect.top - pickerH - 6;
-  picker.style.top  = top  + 'px';
-  picker.style.left = left + 'px';
-  picker.classList.add('open');
-};
-
-window.pickEmoji = function(emoji) {
-  if (!emojiTargetMsgId) return;
-  toggleReaction(emojiTargetMsgId, emoji);
-  closeEmojiPicker();
-};
-
-function closeEmojiPicker() {
-  document.getElementById('emojiPicker').classList.remove('open');
-  emojiTargetMsgId = null;
-}
-
-// Close picker on outside click
-document.addEventListener('click', e => {
-  if (!document.getElementById('emojiPicker').contains(e.target)) {
-    closeEmojiPicker();
-  }
-});
-
-// ============================================================
-//  REPLY
-// ============================================================
-window.setReply = function(msgId, username, content) {
-  replyingTo = { id: msgId, username, content };
-  document.getElementById('replyBarTo').textContent = 'Replying to @' + username;
-  document.getElementById('replyBarPreview').textContent = content || '[image]';
-  document.getElementById('replyBar').classList.add('show');
-  document.getElementById('commInput').focus();
-};
-
-window.cancelReply = function() {
-  replyingTo = null;
-  document.getElementById('replyBar').classList.remove('show');
-};
-
-window.scrollToMessage = function(msgId) {
-  const el = document.querySelector(`[data-msg-id="${msgId}"]`);
-  if (!el) return;
-  el.scrollIntoView({ behavior:'smooth', block:'center' });
-  // Flash highlight
-  el.style.transition = 'background .1s';
-  el.style.background = 'rgba(0,212,255,.08)';
-  setTimeout(() => { el.style.background = ''; }, 1200);
-};
-
-// ============================================================
-//  IMAGE
-// ============================================================
-window.handleImageSelect = function(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  if (file.size > 5*1024*1024) { alert('Max 5MB'); return; }
-  selectedFile = file;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    document.getElementById('imgPreviewThumb').src = ev.target.result;
-    document.getElementById('imgPreviewName').textContent = file.name;
-    document.getElementById('imgPreviewWrap').classList.add('show');
-  };
-  reader.readAsDataURL(file);
-};
-window.removeImage = function() {
-  selectedFile = null;
-  document.getElementById('imgFileInput').value = '';
-  document.getElementById('imgPreviewThumb').src = '';
-  document.getElementById('imgPreviewName').textContent = '';
-  document.getElementById('imgPreviewWrap').classList.remove('show');
-};
-
-// ============================================================
-//  LIGHTBOX
-// ============================================================
-window.openLightbox = function(url) {
-  document.getElementById('lightboxImg').src = url;
-  document.getElementById('lightbox').classList.add('open');
-};
-window.closeLightbox = function() {
-  document.getElementById('lightbox').classList.remove('open');
-};
-
-// ============================================================
-//  PROFILE MODAL + IMAGE CROPPER
-// ============================================================
-
-// --- Cropper state ---
-let cropImage   = null;   // HTMLImageElement
-let cropOffX    = 0;      // image offset from center
-let cropOffY    = 0;
-let cropScale   = 1;
-let cropDragging = false;
-let cropDragSX  = 0;
-let cropDragSY  = 0;
-let cropStartOX = 0;
-let cropStartOY = 0;
-
-const CROP_SIZE = 240;
-const CROP_R    = 108;
-
-function cropDraw() {
-  const canvas = document.getElementById('cropCanvas');
-  if (!canvas || !cropImage) return;
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, CROP_SIZE, CROP_SIZE);
-
-  const iw = cropImage.naturalWidth  * cropScale;
-  const ih = cropImage.naturalHeight * cropScale;
-  const cx = CROP_SIZE / 2 + cropOffX;
-  const cy = CROP_SIZE / 2 + cropOffY;
-
-  ctx.drawImage(cropImage, cx - iw/2, cy - ih/2, iw, ih);
-}
-
-function initCropEvents() {
-  const wrap = document.getElementById('cropWrap');
-  if (!wrap) return;
-
-  // Mouse
-  wrap.onmousedown = e => {
-    cropDragging = true;
-    cropDragSX = e.clientX; cropDragSY = e.clientY;
-    cropStartOX = cropOffX; cropStartOY = cropOffY;
-    e.preventDefault();
-  };
-  document.onmousemove = e => {
-    if (!cropDragging) return;
-    cropOffX = cropStartOX + (e.clientX - cropDragSX);
-    cropOffY = cropStartOY + (e.clientY - cropDragSY);
-    cropDraw();
-  };
-  document.onmouseup = () => { cropDragging = false; };
-
-  // Touch
-  wrap.ontouchstart = e => {
-    const t = e.touches[0];
-    cropDragging = true;
-    cropDragSX = t.clientX; cropDragSY = t.clientY;
-    cropStartOX = cropOffX; cropStartOY = cropOffY;
-  };
-  wrap.ontouchmove = e => {
-    if (!cropDragging) return;
-    const t = e.touches[0];
-    cropOffX = cropStartOX + (t.clientX - cropDragSX);
-    cropOffY = cropStartOY + (t.clientY - cropDragSY);
-    cropDraw(); e.preventDefault();
-  };
-  wrap.ontouchend = () => { cropDragging = false; };
-
-  // Zoom slider
-  const slider = document.getElementById('cropZoom');
-  slider.oninput = () => {
-    cropScale = parseFloat(slider.value);
-    document.getElementById('cropZoomVal').textContent = cropScale.toFixed(1) + '×';
-    cropDraw();
-  };
-}
-
-function openCropEditor(img) {
-  cropImage = img;
-  cropOffX = 0; cropOffY = 0; cropScale = 1;
-
-  // Auto-fit: scale so the shorter side fills the circle
-  const fitW = (CROP_SIZE * 0.9) / img.naturalWidth;
-  const fitH = (CROP_SIZE * 0.9) / img.naturalHeight;
-  cropScale = Math.max(fitW, fitH);
-  cropScale = Math.min(Math.max(cropScale, 0.5), 3);
-
-  const slider = document.getElementById('cropZoom');
-  slider.value = cropScale;
-  document.getElementById('cropZoomVal').textContent = cropScale.toFixed(1) + '×';
-
-  document.getElementById('avatarUploadZone').style.display = 'none';
-  document.getElementById('cropEditor').classList.add('show');
-  cropDraw();
-}
-
-window.cancelCrop = function() {
-  document.getElementById('cropEditor').classList.remove('show');
-  document.getElementById('avatarUploadZone').style.display = '';
-  document.getElementById('avatarFileInput').value = '';
-  // If no avatar yet keep upload zone in initial state; if already have one keep preview
-  if (!currentProfile?.avatar_url) {
-    document.getElementById('avatarUploadContent').style.display = 'block';
-    document.getElementById('avatarPreviewContent').style.display = 'none';
-  }
-};
-
-window.applyCrop = function() {
-  // Render circular crop to a 256×256 canvas
-  const out = document.createElement('canvas');
-  out.width = 256; out.height = 256;
-  const ctx = out.getContext('2d');
-
-  // Clip circle
-  ctx.beginPath();
-  ctx.arc(128, 128, 128, 0, Math.PI * 2);
-  ctx.clip();
-
-  // Draw scaled image centered
-  const iw = cropImage.naturalWidth  * cropScale;
-  const ih = cropImage.naturalHeight * cropScale;
-  // Map from 240px canvas space to 256px output
-  const ratio = 256 / CROP_SIZE;
-  const cx = 128 + cropOffX * ratio;
-  const cy = 128 + cropOffY * ratio;
-  ctx.drawImage(cropImage, cx - iw*ratio/2, cy - ih*ratio/2, iw*ratio, ih*ratio);
-
-  // Convert to blob → set as selectedAvatarFile
-  out.toBlob(blob => {
-    selectedAvatarFile = new File([blob], 'avatar.png', { type: 'image/png' });
-
-    // Update preview in upload zone
-    const dataUrl = out.toDataURL('image/png');
-    document.getElementById('avatarPreviewImg').src = dataUrl;
-    document.getElementById('avatarUploadContent').style.display  = 'none';
-    document.getElementById('avatarPreviewContent').style.display = 'block';
-
-    // Live update preview avatar in modal header
-    const av = document.getElementById('previewAvatar');
-    av.style.background = 'transparent';
-    av.innerHTML = `<img src="${dataUrl}" alt="preview" style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;">`;
-
-    // Hide cropper, show upload zone with preview
-    document.getElementById('cropEditor').classList.remove('show');
-    document.getElementById('avatarUploadZone').style.display = '';
-  }, 'image/png');
-};
-
-function resetAvatarUploadUI(avatarUrl) {
-  const zone       = document.getElementById('avatarUploadZone');
-  const initial    = document.getElementById('avatarUploadContent');
-  const preview    = document.getElementById('avatarPreviewContent');
-  const previewImg = document.getElementById('avatarPreviewImg');
-
-  document.getElementById('cropEditor').classList.remove('show');
-  zone.style.display = '';
-
-  if (avatarUrl) {
-    previewImg.src = avatarUrl;
-    initial.style.display  = 'none';
-    preview.style.display  = 'block';
-  } else {
-    initial.style.display  = 'block';
-    preview.style.display  = 'none';
-  }
-
-  // Drag & drop
-  zone.ondragover  = e => { e.preventDefault(); zone.classList.add('drag-over'); };
-  zone.ondragleave = () => zone.classList.remove('drag-over');
-  zone.ondrop      = e => {
-    e.preventDefault(); zone.classList.remove('drag-over');
-    const file = e.dataTransfer.files[0];
-    if (file) loadFileForCrop(file);
-  };
-}
-
-function loadFileForCrop(file) {
-  if (!file.type.startsWith('image/')) { alert('Please select an image file'); return; }
-  if (file.size > 5*1024*1024) { alert('Max 5MB'); return; }
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const img = new Image();
-    img.onload = () => openCropEditor(img);
-    img.src = ev.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
-window.handleAvatarSelect = function(e) {
-  const file = e.target.files[0];
-  if (file) loadFileForCrop(file);
-  e.target.value = '';
-};
-
-window.openProfile = function() {
-  selectedAvatarFile = null;
-  const uname     = currentProfile?.username || 'user';
-  const color     = currentProfile?.avatar_color || '#00d4ff';
-  const avatarUrl = currentProfile?.avatar_url || null;
-  const av = document.getElementById('previewAvatar');
-  setAvatarEl(av, avatarUrl, color, uname[0].toUpperCase());
-  document.getElementById('previewName').textContent = uname;
-  document.getElementById('profileSaveMsg').textContent = '';
-  resetAvatarUploadUI(avatarUrl);
-  initCropEvents();
-  document.getElementById('profileModal').classList.add('open');
-};
-
-window.closeProfile = function() {
-  cropDragging = false;
-  document.onmousemove = null;
-  document.onmouseup   = null;
-  document.getElementById('profileModal').classList.remove('open');
-};
-
-window.saveProfile = async function() {
-  const btn = document.getElementById('profileSaveBtn');
-  const msg = document.getElementById('profileSaveMsg');
-  if (!selectedAvatarFile) {
-    msg.textContent = '// Select and crop an image first';
-    msg.style.color = 'var(--text-dim)';
-    return;
-  }
-  btn.disabled = true; btn.textContent = '[ UPLOADING... ]';
-  msg.textContent = ''; msg.style.color = 'var(--green)';
-
-  const path = `${currentUser.id}/avatar.png`;
-  const { error: upErr } = await supabase.storage
-    .from('avatars')
-    .upload(path, selectedAvatarFile, { upsert: true, contentType: 'image/png' });
-
-  if (upErr) {
-    msg.textContent = '// Upload error: ' + upErr.message;
-    msg.style.color = '#ff6b6b';
-    btn.disabled = false; btn.textContent = '[ SAVE CHANGES ]';
-    return;
-  }
-
-  const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path);
-  const avatarUrl = urlData.publicUrl + '?v=' + Date.now();
-
-  const { error: dbErr } = await supabase.from('profiles')
-    .update({ avatar_url: avatarUrl })
-    .eq('id', currentUser.id);
-
-  if (dbErr) {
-    msg.textContent = '// DB error: ' + dbErr.message;
-    msg.style.color = '#ff6b6b';
-  } else {
-    currentProfile = { ...currentProfile, avatar_url: avatarUrl };
-    updateNavAvatar();
-    selectedAvatarFile = null;
-    msg.textContent = '✓ Avatar updated!';
-  }
-  btn.disabled = false; btn.textContent = '[ SAVE CHANGES ]';
-};
-
-// ============================================================
-//  CURSOR
-// ============================================================
-(function() {
-  const dot = document.getElementById('cursorDot');
-  const ring = document.getElementById('cursorRing');
-  if (!dot||!ring||'ontouchstart' in window) {
-    if(dot) dot.style.display='none';
-    if(ring) ring.style.display='none'; return;
-  }
-  let mx=0,my=0,rx=0,ry=0;
-  document.addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY; dot.style.left=mx+'px'; dot.style.top=my+'px'; });
-  document.addEventListener('mousedown', () => ring.classList.add('clicking'));
-  document.addEventListener('mouseup',   () => ring.classList.remove('clicking'));
-  const lerp = (a,b,t) => a+(b-a)*t;
-  (function loop() {
-    rx=lerp(rx,mx,.18); ry=lerp(ry,my,.18);
-    ring.style.left=rx+'px'; ring.style.top=ry+'px';
-    requestAnimationFrame(loop);
-  })();
-})();
-
-// ============================================================
-//  KEYBOARD
-// ============================================================
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closeLightbox(); closeProfile(); closeEmojiPicker(); cancelReply(); }
-});
-
-init();
-</script>
+<script src="script.js"></script>
 </body>
 </html>
