@@ -324,6 +324,8 @@
   .online-user-name{display:none;}
   .server-stat-val{font-size:14px;}
   .emoji-picker{left:0;width:260px;}
+  .date-sep{display:flex;align-items:center;gap:10px;margin:14px 0 8px;font-family:var(--mono);font-size:9px;color:var(--text-dim);letter-spacing:.12em;}
+  .date-sep::before,.date-sep::after{content:"";flex:1;height:1px;background:rgba(0,212,255,.1);}
 }
 </style>
 </head>
@@ -939,7 +941,9 @@ function renderMessage(msg) {
   const color=msg.profiles?.avatar_color||'#00d4ff';
   const avatarUrl=msg.profiles?.avatar_url||null;
   const initial=username[0].toUpperCase();
-  const time=new Date(msg.created_at).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+  const _d=new Date(msg.created_at);
+  const time=_d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+  const dateStr=_d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
   const avatarInner=avatarUrl?`<img src="${avatarUrl}" alt="avatar" style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;">`:initial;
   const avatarStyle=avatarUrl?'background:transparent;':`background:${color};`;
 
@@ -962,14 +966,20 @@ function renderMessage(msg) {
   let html=`${replyHtml}<div class="msg-header">
     <div class="msg-avatar" style="${avatarStyle}" onclick="viewProfile('${msg.user_id}')">${avatarInner}</div>
     <span class="msg-username" onclick="viewProfile('${msg.user_id}')">${escHtml(username)}</span>
-    <span class="msg-time">${time}</span>
-    <div class="msg-badges">${badgePills(msg.userBadges)}</div>
+    <span class="msg-time" title="${dateStr}">${time} · ${dateStr}</span>    <div class="msg-badges">${badgePills(msg.userBadges)}</div>
     <div class="msg-actions">${reactBtn}${replyBtn}${delBtn}</div>
   </div>`;
   if(msg.content) html+=`<div class="msg-bubble${isOwn?' own':''}">${formatText(msg.content)}</div>`;
   if(msg.image_url) html+=`<img class="msg-img" src="${msg.image_url}" alt="image" onclick="openLightbox('${msg.image_url}')">`;
   // Reactions area
   html+=`<div class="msg-reactions" id="reactions-${msg.id}"></div>`;
+  const _sep=container.querySelector('.date-sep:last-of-type');
+  if(!_sep||_sep.dataset.date!==dateStr){
+    const sep=document.createElement('div');
+    sep.className='date-sep'; sep.dataset.date=dateStr;
+    sep.innerHTML=`<span>${dateStr}</span>`;
+    container.appendChild(sep);
+  }
   group.innerHTML=html;
   container.appendChild(group);
   // Render reaction pills
@@ -1017,8 +1027,7 @@ function subscribeRealtime() {
     // New messages
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:`room_id=eq.${currentRoomId}`},
       async(payload)=>{
-        if(payload.new.user_id===currentUser.id) return;
-        const {data:profile}=await supabase.from('profiles').select('id,username,avatar_color,avatar_url').eq('id',payload.new.user_id).single();
+        if(document.querySelector(`[data-msg-id="${payload.new.id}"]`)) return;        const {data:profile}=await supabase.from('profiles').select('id,username,avatar_color,avatar_url').eq('id',payload.new.user_id).single();
         let badgeIds=[];
         try{const {data:b}=await supabase.from('user_badges').select('badge_id').eq('user_id',payload.new.user_id);badgeIds=(b||[]).map(x=>x.badge_id);}catch(e){}
         let replyMsg=null,replyProf=null;
