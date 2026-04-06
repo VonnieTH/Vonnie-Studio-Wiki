@@ -1391,7 +1391,7 @@ window.viewProfile=async function(userId){
   setAvatarEl(document.getElementById('pviewAvatar'),prof.avatar_url,color,uname[0].toUpperCase());
   // Name + role
   document.getElementById('pviewName').textContent=uname;
-  document.getElementById('pviewRole').textContent=isOwn?"★ The Creator ★":'Community Member';
+  document.getElementById('pviewRole').textContent= prof.role ? `// ${prof.role}` : '// Community Member';
   // Bio
   const bioEl=document.getElementById('pviewBio');
   if(prof.bio){bioEl.textContent='"'+prof.bio+'"';bioEl.classList.remove('pview-bio-empty');}
