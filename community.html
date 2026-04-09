@@ -86,7 +86,7 @@
 .rt-status{display:flex;align-items:center;gap:5px;margin-left:auto;}
 .rt-status-dot{width:6px;height:6px;border-radius:50%;background:#ff6b6b;flex-shrink:0;transition:background .3s,box-shadow .3s;}
 .rt-status-txt{font-family:var(--mono);font-size:8px;letter-spacing:.1em;color:#ff6b6b;transition:color .3s;}
-.comm-messages{flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:2px;scroll-behavior:smooth;}
+.comm-messages{flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:2px;}
 .comm-messages::-webkit-scrollbar{width:4px;}
 .comm-messages::-webkit-scrollbar-thumb{background:rgba(0,212,255,.2);}
 
@@ -782,22 +782,47 @@ window.closeSearch = function() {
   document.getElementById('searchOverlay').classList.remove('open');
   document.getElementById('searchInput').value = '';
   document.getElementById('searchCount').textContent = '';
-  document.querySelectorAll('.msg-group').forEach(el => el.classList.remove('search-dim','search-match'));
+  document.querySelectorAll('.msg-group').forEach(el => {
+    el.classList.remove('search-dim','search-match');
+    const bubble = el.querySelector('.msg-bubble');
+    if (bubble && bubble.dataset.origHtml !== undefined) {
+      bubble.innerHTML = bubble.dataset.origHtml;
+      delete bubble.dataset.origHtml;
+    }
+  });
 };
 window.performSearch = function(query) {
   query = query.trim().toLowerCase();
   const groups = document.querySelectorAll('.msg-group');
+  // Remove all previous highlights
+  groups.forEach(el => {
+    el.classList.remove('search-dim','search-match');
+    const bubble = el.querySelector('.msg-bubble');
+    if (bubble && bubble.dataset.origHtml !== undefined) {
+      bubble.innerHTML = bubble.dataset.origHtml;
+      delete bubble.dataset.origHtml;
+    }
+  });
   if (!query) {
-    groups.forEach(el => el.classList.remove('search-dim','search-match'));
     document.getElementById('searchCount').textContent = '';
     return;
   }
   let matches = 0;
   groups.forEach(el => {
-    const text = (el.querySelector('.msg-bubble')?.textContent || '').toLowerCase();
+    const bubble = el.querySelector('.msg-bubble');
+    const bubbleText = (bubble?.textContent || '').toLowerCase();
     const user = (el.querySelector('.msg-username')?.textContent || '').toLowerCase();
-    if (text.includes(query) || user.includes(query)) {
+    if (bubbleText.includes(query) || user.includes(query)) {
       el.classList.remove('search-dim'); el.classList.add('search-match'); matches++;
+      // Highlight matched text inside bubble
+      if (bubble && bubbleText.includes(query)) {
+        bubble.dataset.origHtml = bubble.innerHTML;
+        const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        bubble.innerHTML = bubble.innerHTML.replace(
+          new RegExp(`(${escaped})`, 'gi'),
+          '<mark style="background:rgba(0,212,255,.35);color:var(--text-main);border-radius:2px;padding:0 1px;">$1</mark>'
+        );
+      }
     } else {
       el.classList.add('search-dim'); el.classList.remove('search-match');
     }
@@ -807,52 +832,43 @@ window.performSearch = function(query) {
 };
 
 // ============================================================
-//  📌 PIN MESSAGE
+//  📌 PIN MESSAGE  (localStorage — ทำงานได้ทันทีไม่ต้องสร้าง table)
 // ============================================================
-window.pinMessage = async function(msgId) {
-  try {
-    await supabase.from('pinned_messages')
-      .upsert({ room_id: currentRoomId, message_id: msgId, pinned_by: currentUser.id },
-               { onConflict: 'room_id' });
-    await loadPinnedMessage(currentRoomId);
-  } catch(e) {
-    console.warn('Pin error (make sure pinned_messages table exists):', e);
-  }
+window.pinMessage = function(msgId) {
+  const group = document.querySelector(`[data-msg-id="${msgId}"]`);
+  if (!group || !currentRoomId) return;
+  const username = group.querySelector('.msg-username')?.textContent || 'unknown';
+  const text = group.querySelector('.msg-bubble')?.textContent || '📷 Image';
+  const pinData = { msgId, username, text: text.substring(0, 120) };
+  try { localStorage.setItem('pin_' + currentRoomId, JSON.stringify(pinData)); } catch(e) {}
+  showPinBar(pinData);
 };
-window.unpinMessage = async function() {
-  try {
-    await supabase.from('pinned_messages').delete().eq('room_id', currentRoomId);
-    document.getElementById('pinBar').classList.remove('show');
-  } catch(e) {}
+window.unpinMessage = function() {
+  try { localStorage.removeItem('pin_' + currentRoomId); } catch(e) {}
+  document.getElementById('pinBar').classList.remove('show');
 };
 window.scrollToPinned = function() {
   const bar = document.getElementById('pinBar');
   if (!bar._msgId) return;
   const el = document.querySelector(`[data-msg-id="${bar._msgId}"]`);
   if (el) {
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.scrollIntoView({ block: 'center' });
     el.style.outline = '1px solid #9b6dff';
     setTimeout(() => { el.style.outline = ''; }, 1600);
   }
 };
-async function loadPinnedMessage(roomId) {
+function showPinBar(pinData) {
+  const bar = document.getElementById('pinBar');
+  document.getElementById('pinBarText').innerHTML =
+    `<span class="pin-bar-user">${escHtml(pinData.username)}</span>: ${escHtml(pinData.text)}`;
+  bar._msgId = pinData.msgId;
+  bar.classList.add('show');
+}
+function loadPinnedMessage(roomId) {
   try {
-    const { data } = await supabase
-      .from('pinned_messages')
-      .select('message_id, messages(id, content, user_id, profiles(username))')
-      .eq('room_id', roomId)
-      .maybeSingle();
-    if (data?.messages) {
-      const bar = document.getElementById('pinBar');
-      const uname = data.messages.profiles?.username || 'unknown';
-      const text = data.messages.content || '📷 Image';
-      document.getElementById('pinBarText').innerHTML =
-        `<span class="pin-bar-user">${escHtml(uname)}</span>: ${escHtml(text.substring(0, 90))}`;
-      bar._msgId = data.messages.id;
-      bar.classList.add('show');
-    } else {
-      document.getElementById('pinBar').classList.remove('show');
-    }
+    const raw = localStorage.getItem('pin_' + roomId);
+    if (raw) { showPinBar(JSON.parse(raw)); }
+    else { document.getElementById('pinBar').classList.remove('show'); }
   } catch(e) {
     document.getElementById('pinBar').classList.remove('show');
   }
@@ -1326,7 +1342,8 @@ async function loadMessages() {
   // Mark last seen
   saveLastSeen(currentRoomId);
 
-  requestAnimationFrame(() => {
+  // Double rAF: first frame = DOM appended, second frame = layout measured
+  requestAnimationFrame(() => requestAnimationFrame(() => {
     if (firstUnreadEl) {
       const divider = document.createElement('div');
       divider.className = 'unread-divider';
@@ -1334,12 +1351,14 @@ async function loadMessages() {
       divider.innerHTML = '<span>— New messages —</span>';
       firstUnreadEl.parentNode.insertBefore(divider, firstUnreadEl);
       const c = document.getElementById('commMessages');
+      // Use offsetTop relative to scrollable container
       c.scrollTop = divider.offsetTop - 60;
     } else {
-      scrollToBottom();
+      const c = document.getElementById('commMessages');
+      c.scrollTop = c.scrollHeight;
     }
     container.style.visibility = '';
-  });
+  }));
 }
 
 function badgePills(badgeIds){
