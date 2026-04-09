@@ -28,6 +28,38 @@ export const BADGE_CATALOG = {
     desc:  'Verified community member',
     tier:  'base',
   },
+  first_message: {
+    id:    'first_message',
+    label: 'First Words',
+    icon:  '💬',
+    color: '#40ff80',
+    desc:  'Sent your very first message in the community',
+    tier:  'base',
+  },
+  chatter: {
+    id:    'chatter',
+    label: 'Chatter',
+    icon:  '🗣️',
+    color: '#ffd700',
+    desc:  'Sent 10 messages',
+    tier:  'silver',
+  },
+  veteran: {
+    id:    'veteran',
+    label: 'Veteran',
+    icon:  '📢',
+    color: '#ff8c00',
+    desc:  'Sent 50 messages — true community regular',
+    tier:  'gold',
+  },
+  image_sender: {
+    id:    'image_sender',
+    label: 'Shutterbug',
+    icon:  '📸',
+    color: '#ff6bff',
+    desc:  'Shared your first image in the community',
+    tier:  'base',
+  },
 };
 
 // ============================================================
