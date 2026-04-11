@@ -112,9 +112,11 @@
 .msg-img:hover{border-color:var(--cyan);}
 .comm-empty{flex:1;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;color:var(--text-dim);letter-spacing:.1em;flex-direction:column;gap:8px;}
 
-/* Message actions on hover */
+/* Message actions on hover (desktop only) */
 .msg-actions{display:none;gap:4px;margin-left:auto;}
-.msg-header:hover .msg-actions{display:flex;}
+@media(min-width:601px){
+  .msg-header:hover .msg-actions{display:flex;}
+}
 .msg-action-btn{background:none;border:1px solid rgba(0,212,255,.2);color:var(--text-dim);font-family:var(--mono);font-size:8px;cursor:pointer;padding:2px 6px;transition:all .15s;letter-spacing:.06em;}
 .msg-action-btn:hover{border-color:var(--cyan);color:var(--cyan);background:var(--cyan-dim);}
 .msg-action-btn.del:hover{border-color:#ff6b6b;color:#ff6b6b;background:rgba(255,107,107,.08);}
@@ -327,14 +329,119 @@
 .new-msg-toast{position:absolute;bottom:130px;left:50%;transform:translateX(-50%);background:var(--bg-card);border:1px solid var(--cyan-border);box-shadow:0 4px 16px rgba(0,0,0,.6);font-family:var(--mono);font-size:10px;color:var(--cyan);letter-spacing:.08em;padding:6px 14px;cursor:pointer;z-index:400;white-space:nowrap;animation:fadeUp .2s ease;}
 .new-msg-toast:hover{background:var(--cyan-dim);}
 @media(max-width:600px){
-  .comm-sidebar{width:48px;}
-  .sidebar-tab{font-size:7px;padding:6px 2px;}
-  .comm-sidebar-label,.server-stat-sub,.online-you,.fmt-hint{display:none;}
-  .room-item{padding:10px;justify-content:center;}
-  .room-item span:not(.room-item-hash){display:none;}
-  .online-user-name{display:none;}
-  .server-stat-val{font-size:14px;}
-  .emoji-picker{left:0;width:260px;}
+  /* ── NAV ── */
+  .comm-nav{height:50px;padding:0 12px;gap:8px;}
+  .comm-nav-title{font-size:11px;}
+  .comm-nav-title span{display:none;}
+  .comm-back-btn span{display:none;}        /* hide "WIKI" text, keep icon */
+  .comm-back-btn{padding:6px 8px;}
+  #navUsername{display:none;}
+  .comm-logout-btn{font-size:8px;padding:4px 8px;}
+  .comm-avatar{width:32px;height:32px;}
+
+  /* ── SIDEBAR: hidden off-screen, slide in as drawer ── */
+  .community-body{position:relative;}
+  .comm-sidebar{
+    position:fixed; top:50px; left:0; bottom:0; z-index:400;
+    width:240px; transform:translateX(-100%);
+    transition:transform .25s ease;
+    box-shadow:4px 0 20px rgba(0,0,0,.6);
+  }
+  .comm-sidebar.mob-open{transform:translateX(0);}
+  .sidebar-drawer-overlay{
+    display:none; position:fixed; inset:0; z-index:399;
+    background:rgba(0,0,0,.55);
+  }
+  .sidebar-drawer-overlay.show{display:block;}
+
+  /* sidebar content bigger for touch */
+  .sidebar-tab{font-size:11px;padding:10px 6px;}
+  .comm-sidebar-label{font-size:10px;padding:14px 16px 8px;}
+  .room-item{font-size:13px;padding:12px 16px;}
+  .room-item span{display:inline !important;}   /* show room names */
+  .server-stat-val{font-size:20px;}
+  .server-stat-label{font-size:10px;}
+  .online-user-item{font-size:12px;padding:8px 16px;}
+  .online-user-name{display:block !important;}
+  .online-you{display:inline !important;}
+
+  /* ── CHAT HEADER ── */
+  .comm-chat-header{padding:8px 12px;gap:6px;flex-wrap:nowrap;}
+  .comm-chat-room-name{font-size:14px;}
+  .comm-chat-header > span:nth-child(2){display:none;} /* hide "— VonnieStudio Community" */
+  .search-btn-hdr{padding:5px 8px;font-size:10px;}
+  .rt-status-txt{display:none;}  /* keep dot, hide text */
+
+  /* hamburger button (added via JS) */
+  .mob-menu-btn{
+    width:36px;height:36px;flex-shrink:0;
+    background:none;border:1px solid rgba(0,212,255,.25);
+    color:var(--cyan);font-size:16px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    transition:all .15s;
+  }
+  .mob-menu-btn:hover{background:var(--cyan-dim);}
+
+  /* ── MESSAGES ── */
+  .comm-messages{padding:12px 10px;gap:4px;}
+  .msg-group{margin-bottom:12px;}
+  .msg-avatar{width:34px;height:34px;font-size:13px;}
+  .msg-username{font-size:13px;}
+  .msg-time{font-size:10px;}
+  .msg-bubble{font-size:14px;line-height:1.65;padding:7px 10px;margin-left:42px;}
+  .msg-img{margin-left:42px;max-width:100%;}
+  .msg-reactions{margin-left:42px;}
+  .reaction-pill{font-size:12px;padding:4px 10px;}
+  .reaction-emoji{font-size:16px;}
+  .reply-quote{margin-left:42px;}
+  .thread-btn{margin-left:42px;font-size:10px;padding:4px 10px;}
+
+  /* Action buttons: always visible on mobile (no hover needed) */
+  .msg-actions{display:flex !important;}
+  .msg-action-btn{font-size:10px;padding:5px 9px;}
+
+  /* ── PIN / REPLY BARS ── */
+  .pin-bar{padding:7px 12px;}
+  .pin-bar-text{font-size:11px;}
+  .reply-bar{padding:7px 12px;}
+  .reply-bar-quote{font-size:11px;}
+
+  /* ── INPUT BAR ── */
+  .comm-input-bar{padding:8px 10px;gap:6px;}
+  .comm-input{font-size:14px;padding:10px 12px;min-height:42px;}
+  .comm-send-btn{height:42px;padding:0 14px;font-size:11px;}
+  .comm-img-btn{width:42px;height:42px;font-size:15px;}
+  .fmt-btn{width:30px;height:28px;font-size:13px;}
+  .emoji-toggle-btn{width:30px;height:28px;font-size:16px;}
+  .fmt-hint{display:none;}
+  .char-counter{font-size:10px;}
+
+  /* ── EMOJI PICKER ── */
+  .emoji-picker{left:0;right:0;width:auto;bottom:115px;}
+  .emoji-grid{grid-template-columns:repeat(9,1fr);max-height:160px;}
+  .emoji-btn{font-size:22px;}
+
+  /* ── SEARCH OVERLAY ── */
+  .search-inner{padding:8px 12px;}
+  .search-input{font-size:13px;padding:8px 12px;}
+
+  /* ── ACHIEVEMENT TOAST ── */
+  .achievement-toast{right:10px;left:10px;min-width:unset;max-width:unset;}
+
+  /* ── UNREAD DIVIDER / TOASTS ── */
+  .unread-divider{font-size:10px;}
+  .new-msg-toast{font-size:11px;padding:8px 16px;bottom:115px;}
+
+  /* ── THREAD MODAL ── */
+  .thread-box{max-height:90vh;width:100%;max-width:100%;border-left:none;border-right:none;}
+  .thread-overlay{align-items:flex-end;}
+
+  /* ── PROFILE MODALS ── */
+  .pview-box,.pedit-box{max-width:100%;width:100%;}
+  .pview-overlay,.pedit-overlay{align-items:flex-end;}
+
+  /* ── CURSOR: hide on touch ── */
+  .cursor-dot,.cursor-ring{display:none !important;}
 }
 
 /* ======= MSG ANIMATION ======= */
@@ -446,7 +553,9 @@
 <!-- COMMUNITY -->
 <div class="community-screen" id="communityScreen">
   <nav class="comm-nav">
-    <a href="index.html" class="comm-back-btn"><i class="fa-solid fa-chevron-left" style="font-size:9px;"></i> WIKI</a>
+    <!-- Mobile hamburger (hidden on desktop via CSS) -->
+    <button class="mob-menu-btn" id="mobMenuBtn" onclick="openMobSidebar()" style="display:none;">☰</button>
+    <a href="index.html" class="comm-back-btn"><i class="fa-solid fa-chevron-left" style="font-size:9px;"></i> <span>WIKI</span></a>
     <div class="comm-nav-title">VONNIESTUDIO <span>// COMMUNITY</span></div>
     <div class="comm-nav-user">
       <div class="comm-avatar" id="navAvatar" onclick="openOwnProfile()" title="My Profile">?</div>
@@ -455,7 +564,9 @@
     </div>
   </nav>
   <div class="community-body">
-    <aside class="comm-sidebar">
+    <!-- Mobile sidebar overlay backdrop -->
+    <div class="sidebar-drawer-overlay" id="sidebarOverlay" onclick="closeMobSidebar()"></div>
+    <aside class="comm-sidebar" id="commSidebar">
       <div class="sidebar-tabs">
         <button class="sidebar-tab active" onclick="switchSidebarTab('channels')">CHANNELS</button>
         <button class="sidebar-tab" onclick="switchSidebarTab('server')">SERVER</button>
@@ -1292,7 +1403,7 @@ async function loadRooms() {
     const div=document.createElement('div');
     div.className='room-item'+(i===0?' active':'');
     div.innerHTML=`<span class="room-item-hash">#</span><span>${room.name.replace('#','')}</span>`;
-    div.onclick=()=>selectRoom(room,div);
+    div.onclick=()=>{ selectRoom(room,div); if(isMobile()) closeMobSidebar(); };
     list.appendChild(div);
     if(i===0) selectRoom(room,div,true);
   });
@@ -2019,8 +2130,31 @@ function resetAvatarUploadUI(avatarUrl){
 }
 
 // ============================================================
-//  CURSOR
+//  MOBILE SIDEBAR DRAWER
 // ============================================================
+function isMobile() { return window.innerWidth <= 600; }
+
+window.openMobSidebar = function() {
+  document.getElementById('commSidebar').classList.add('mob-open');
+  document.getElementById('sidebarOverlay').classList.add('show');
+};
+window.closeMobSidebar = function() {
+  document.getElementById('commSidebar').classList.remove('mob-open');
+  document.getElementById('sidebarOverlay').classList.remove('show');
+};
+
+// Show/hide hamburger based on viewport
+function updateMobUI() {
+  const btn = document.getElementById('mobMenuBtn');
+  if (btn) btn.style.display = isMobile() ? 'flex' : 'none';
+}
+updateMobUI();
+window.addEventListener('resize', updateMobUI);
+
+// Close drawer when a room is selected on mobile
+const _origSelectRoomMob = window.selectRoom;
+
+
 (function(){
   const dot=document.getElementById('cursorDot'),ring=document.getElementById('cursorRing');
   if(!dot||!ring||'ontouchstart' in window){if(dot)dot.style.display='none';if(ring)ring.style.display='none';return;}
