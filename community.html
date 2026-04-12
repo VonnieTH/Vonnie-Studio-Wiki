@@ -466,6 +466,24 @@
 @keyframes msgSlideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .msg-group.animate-in{animation:msgSlideIn .22s ease both;}
 
+/* ======= BOT ATTRIBUTION ======= */
+.bot-trigger-line{font-family:var(--mono);font-size:9px;color:var(--text-dim);margin-bottom:4px;padding:2px 8px;border-left:2px solid rgba(64,255,128,.3);margin-left:36px;letter-spacing:.04em;}
+.bot-trigger-line strong{color:var(--green);}
+.bot-cmd-code{background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);padding:0 4px;font-family:var(--mono);font-size:8px;color:var(--cyan);border-radius:2px;}
+
+/* ======= VONNIE AI ======= */
+.vonnie-name{color:#c084fc !important;text-shadow:0 0 10px rgba(192,132,252,.5);}
+.vonnie-bubble{background:rgba(155,109,255,.06)!important;border-left-color:rgba(155,109,255,.4)!important;}
+@keyframes vonnieDot{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-4px);opacity:1}}
+.vonnie-typing-bubble{background:rgba(155,109,255,.06)!important;border-left-color:rgba(155,109,255,.3)!important;display:flex;align-items:center;gap:4px;padding:10px 14px!important;min-height:36px;}
+.vonnie-dot{width:5px;height:5px;border-radius:50%;background:#9b6dff;display:inline-block;animation:vonnieDot 1.2s ease-in-out infinite;}
+.vonnie-dot:nth-child(2){animation-delay:.2s;}
+.vonnie-dot:nth-child(3){animation-delay:.4s;}
+
+/* Room mode badge */
+.room-mode-badge.ai{color:#c084fc;border-color:rgba(192,132,252,.4);background:rgba(192,132,252,.06);}
+.room-mode-badge.announce{color:var(--gold);border-color:rgba(240,192,64,.4);background:rgba(240,192,64,.06);}
+
 /* ======= SEARCH ======= */
 .search-overlay{display:none;position:absolute;top:0;left:0;right:0;z-index:300;background:var(--bg-panel);border-bottom:1px solid var(--cyan-border);box-shadow:0 4px 16px rgba(0,0,0,.4);}
 .search-overlay.open{display:block;}
@@ -1229,6 +1247,8 @@ let replyTo         = null;
 let viewingUserId   = null;
 let reactPickerMsgId = null;
 let realtimeRetryTimer = null;
+let vonnieHistory   = [];
+let vonnieTyping    = false;
 
 // ============================================================
 //  INIT
@@ -1686,21 +1706,31 @@ function setRealtimeIndicator(status) {
 }
 
 function subscribeRealtime() {
-  if (realtimeSub) supabase.removeChannel(realtimeSub);
+  if (realtimeSub) { try { supabase.removeChannel(realtimeSub); } catch(e) {} }
   if (realtimeRetryTimer) { clearTimeout(realtimeRetryTimer); realtimeRetryTimer = null; }
 
   setRealtimeIndicator('CONNECTING');
-  const roomId = currentRoomId; // capture at subscribe time
+  const roomId = currentRoomId;
+
+  // Exponential backoff state
+  if (!subscribeRealtime._retryCount) subscribeRealtime._retryCount = 0;
+
+  // Connection timeout — if not SUBSCRIBED within 10s, retry
+  const connectTimeout = setTimeout(() => {
+    if (realtimeStatus !== 'SUBSCRIBED' && currentRoomId === roomId) {
+      console.warn('[Realtime] connect timeout, retrying...');
+      subscribeRealtime._retryCount++;
+      scheduleRealtimeRetry(roomId);
+    }
+  }, 10000);
 
   realtimeSub = supabase.channel('room-rt-' + roomId, {
-    config: { broadcast: { self: false } }
+    config: { broadcast: { self: false }, presence: { key: currentUser?.id } }
   })
     .on('postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'messages', filter: `room_id=eq.${roomId}` },
       async (payload) => {
-        // Skip if already rendered (own optimistic message)
         if (document.querySelector(`[data-msg-id="${payload.new.id}"]`)) return;
-        // Skip if user has switched rooms
         if (currentRoomId !== roomId) return;
 
         const [{ data: profile }, { data: badges }] = await Promise.all([
@@ -1718,10 +1748,27 @@ function subscribeRealtime() {
           }
         }
 
-        // Re-check after all async ops — optimistic render may have already added the element
         if (document.querySelector(`[data-msg-id="${payload.new.id}"]`)) return;
 
         const isOthers = payload.new.user_id !== currentUser?.id;
+
+        // Bot room: if incoming message is a command, render bot reply locally
+        if (currentRoomMode === 'bot' && payload.new.content?.startsWith('/') && isOthers) {
+          const reply = getBotReply(payload.new.content);
+          if (reply !== null) {
+            renderMessage({
+              ...payload.new,
+              profiles: profile || null,
+              userBadges: (badges || []).map(x => x.badge_id),
+              reactions: [], replyMsg, replyProf, replyCount: 0,
+            }, false, false, true);
+            setTimeout(() => renderBotMessage(reply, profile?.username || 'unknown', payload.new.content), 600);
+            saveLastSeen(roomId);
+            if (isNearBottom()) scrollToBottom(); else showNewMsgToast();
+            return;
+          }
+        }
+
         renderMessage({
           ...payload.new,
           profiles:   profile || null,
@@ -1730,7 +1777,7 @@ function subscribeRealtime() {
           replyMsg,
           replyProf,
           replyCount: 0,
-        }, false, false, true); // animate=true for new incoming messages
+        }, false, false, true);
         saveLastSeen(roomId);
         if (isOthers) triggerNotification(profile?.username || 'Someone', payload.new.content);
         if (isNearBottom()) scrollToBottom();
@@ -1749,15 +1796,28 @@ function subscribeRealtime() {
         if (el) await refreshReactionPills(payload.old.message_id);
       })
     .subscribe((status, err) => {
+      clearTimeout(connectTimeout);
       setRealtimeIndicator(status);
+      if (status === 'SUBSCRIBED') {
+        subscribeRealtime._retryCount = 0; // reset on success
+      }
       if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
         console.warn('[Realtime] status:', status, err);
-        // Auto-reconnect after 3s
-        realtimeRetryTimer = setTimeout(() => {
-          if (currentRoomId === roomId) subscribeRealtime();
-        }, 3000);
+        subscribeRealtime._retryCount++;
+        scheduleRealtimeRetry(roomId);
       }
     });
+}
+
+function scheduleRealtimeRetry(roomId) {
+  if (realtimeRetryTimer) clearTimeout(realtimeRetryTimer);
+  const count = subscribeRealtime._retryCount || 0;
+  // Exponential backoff: 2s, 4s, 8s, 16s, max 30s
+  const delay = Math.min(2000 * Math.pow(2, count - 1), 30000);
+  console.log(`[Realtime] retry in ${delay}ms (attempt ${count})`);
+  realtimeRetryTimer = setTimeout(() => {
+    if (currentRoomId === roomId) subscribeRealtime();
+  }, delay);
 }
 
 async function refreshReactionPills(msgId){
@@ -1799,9 +1859,39 @@ window.sendMessage = async function() {
       input.value = ''; input.style.height = 'auto';
       document.getElementById('charCounter').textContent = '';
       cancelReply();
-      renderBotMessage(reply);
+      // Save command to DB so everyone sees who used it
+      const {data:cmdInserted} = await supabase.from('messages').insert({
+        user_id: currentUser.id, room_id: currentRoomId, content
+      }).select().single();
+      if (cmdInserted) {
+        let badges=[];
+        try{const{data:b}=await supabase.from('user_badges').select('badge_id').eq('user_id',currentUser.id);badges=b||[];}catch(e){}
+        renderMessage({...cmdInserted,profiles:currentProfile,userBadges:badges.map(b=>b.badge_id),reactions:[],replyMsg:null,replyProf:null,replyCount:0},false,false,true);
+      }
+      // Render bot reply locally with attribution
+      setTimeout(() => renderBotMessage(reply, currentProfile?.username || 'user', content), 500);
       return;
     }
+  }
+
+  // ── AI ROOM ──────────────────────────────────────────────
+  if (currentRoomMode === 'ai') {
+    input.value = ''; input.style.height = 'auto';
+    document.getElementById('charCounter').textContent = '';
+    cancelReply();
+    // Save user message to DB
+    const {data:aiInserted} = await supabase.from('messages').insert({
+      user_id: currentUser.id, room_id: currentRoomId, content
+    }).select().single();
+    if (aiInserted) {
+      let badges=[];
+      try{const{data:b}=await supabase.from('user_badges').select('badge_id').eq('user_id',currentUser.id);badges=b||[];}catch(e){}
+      renderMessage({...aiInserted,profiles:currentProfile,userBadges:badges.map(b=>b.badge_id),reactions:[],replyMsg:null,replyProf:null,replyCount:0},false,false,true);
+      scrollToBottom();
+    }
+    // Call Vonnie AI
+    await callVonnieAI(content);
+    return;
   }
   btn.disabled=true;
   let image_url=null;
@@ -2237,11 +2327,13 @@ document.addEventListener('keydown',e=>{
 //  ROOM CONFIG — special behaviors per channel
 // ============================================================
 const ROOM_CONFIG = {
-  'general':      { icon: '#', desc: '— General chat',                    mode: 'normal' },
-  'random':       { icon: '#', desc: '— Random stuff & off-topic',        mode: 'normal' },
-  'showcase':     { icon: '🖼', desc: '— Share your work · images only',  mode: 'image-only' },
-  'lounge':       { icon: '☕', desc: '— Chill zone · slow mode 30s',     mode: 'slow', slowMs: 30000 },
-  'bot':          { icon: '🤖', desc: '— Bot commands: /roll /8ball /coin /rps', mode: 'bot' },
+  'general':      { icon: '#',  desc: '— General chat',                                           mode: 'normal' },
+  'random':       { icon: '🎲', desc: '— Random stuff & off-topic',                               mode: 'normal' },
+  'showcase':     { icon: '🖼', desc: '— Share your work · images only',                          mode: 'image-only' },
+  'lounge':       { icon: '☕', desc: '— Chill zone · slow mode 30s',                             mode: 'slow', slowMs: 30000 },
+  'bot':          { icon: '🤖', desc: '— /roll /8ball /coin /rps /joke /choose /quote /help',     mode: 'bot' },
+  'ai-vonnie':    { icon: '🧠', desc: '— Chat with Vonnie AI · conversations stay private',       mode: 'ai' },
+  'announcements':{ icon: '📢', desc: '— Announcements · read only',                              mode: 'announce' },
 };
 let currentRoomMode = 'normal';
 let slowLastSent = 0;
@@ -2260,7 +2352,13 @@ function applyRoomMode(roomName) {
     if (cfg.mode === 'normal') {
       badgeEl.style.display = 'none';
     } else {
-      const labels = { 'image-only': '📸 IMAGES ONLY', 'slow': '🐢 SLOW MODE', 'bot': '🤖 BOT ROOM' };
+      const labels = {
+        'image-only': '📸 IMAGES ONLY',
+        'slow':       '🐢 SLOW MODE',
+        'bot':        '🤖 BOT ROOM',
+        'ai':         '🧠 VONNIE AI',
+        'announce':   '📢 READ ONLY',
+      };
       badgeEl.textContent = labels[cfg.mode] || '';
       badgeEl.className = `room-mode-badge ${cfg.mode}`;
       badgeEl.style.display = '';
@@ -2271,24 +2369,34 @@ function applyRoomMode(roomName) {
   const imgHint = document.getElementById('imgOnlyHint');
   const input = document.getElementById('commInput');
   const fmtToolbar = document.querySelector('.fmt-toolbar');
+  const sendBtn = document.getElementById('sendBtn');
+  const imgBtn = document.querySelector('.comm-img-btn');
+
+  // Reset all mode-specific UI first
+  if (imgHint) imgHint.classList.remove('show');
+  if (input) { input.style.display = ''; input.placeholder = 'Type a message...'; }
+  if (fmtToolbar) fmtToolbar.style.display = '';
+  if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = '[ SEND ]'; sendBtn.classList.remove('slow-count'); }
+  if (imgBtn) imgBtn.style.display = '';
+
   if (cfg.mode === 'image-only') {
     if (imgHint) imgHint.classList.add('show');
+    if (input) input.style.display = 'none';
+    if (fmtToolbar) fmtToolbar.style.display = 'none';
+  } else if (cfg.mode === 'ai') {
+    if (input) input.placeholder = 'Ask Vonnie anything... 🧠';
+    if (imgBtn) imgBtn.style.display = 'none'; // AI room: text only
+    // Reset vonnie conversation history on room enter
+    vonnieHistory = [];
+  } else if (cfg.mode === 'announce') {
     if (input) { input.style.display = 'none'; }
     if (fmtToolbar) fmtToolbar.style.display = 'none';
-  } else {
-    if (imgHint) imgHint.classList.remove('show');
-    if (input) { input.style.display = ''; }
-    if (fmtToolbar) fmtToolbar.style.display = '';
+    if (sendBtn) sendBtn.style.display = 'none';
+    if (imgBtn) imgBtn.style.display = 'none';
   }
 
   // Slow mode — reset timer
   if (slowTimer) { clearInterval(slowTimer); slowTimer = null; }
-  const sendBtn = document.getElementById('sendBtn');
-  if (sendBtn) {
-    sendBtn.classList.remove('slow-count');
-    sendBtn.textContent = '[ SEND ]';
-    sendBtn.disabled = false;
-  }
 }
 
 function startSlowCooldown() {
@@ -2325,23 +2433,47 @@ const BOT_RESPONSES = {
     'My sources say no.','Outlook not so good.',
     'Very doubtful.'
   ],
+  jokes: [
+    "Why don't scientists trust atoms? Because they make up everything. 💀",
+    "I told my computer I needed a break. Now it won't stop sending me vacation ads. 🖥️",
+    "Why do programmers prefer dark mode? Because light attracts bugs. 🐛",
+    "A SQL query walks into a bar, walks up to two tables and asks... 'Can I join you?' 🍺",
+    "Why did the developer go broke? Because he used up all his cache. 💸",
+    "Debugging: Being the detective in a crime movie where you are also the murderer. 🔍",
+    "There are only 10 types of people: those who understand binary and those who don't. 🤓",
+    "I would tell you a UDP joke, but you might not get it. 📡",
+    "My code never has bugs. It just develops random features. ✨",
+    "To understand recursion, you must first understand recursion. 🔄",
+  ],
+  quotes: [
+    '"The only way to do great work is to love what you do." — Steve Jobs',
+    '"Code is like humor. When you have to explain it, it\'s bad." — Cory House',
+    '"First, solve the problem. Then, write the code." — John Johnson',
+    '"Any fool can write code that a computer can understand. Good programmers write code that humans can understand." — Martin Fowler',
+    '"Make it work, make it right, make it fast." — Kent Beck',
+    '"The best error message is the one that never shows up." — Thomas Fuchs',
+    '"Simplicity is the soul of efficiency." — Austin Freeman',
+    '"Talk is cheap. Show me the code." — Linus Torvalds',
+  ],
 };
 
 function getBotReply(content) {
   const cmd = content.trim().toLowerCase();
+  const parts = content.trim().split(' ');
 
   // /roll [max]
   if (cmd === '/roll' || cmd.startsWith('/roll ')) {
-    const max = parseInt(cmd.split(' ')[1]) || 6;
+    const max = parseInt(parts[1]) || 6;
+    if (max < 2 || max > 10000) return '❌ Range must be between 2 and 10,000';
     const n = Math.floor(Math.random() * max) + 1;
-    return '🎲 Rolled a **' + n + '** (out of ' + max + ')';
+    return `🎲 Rolled **${n}** out of ${max}`;
   }
 
   // /8ball [question]
   if (cmd === '/8ball' || cmd.startsWith('/8ball ')) {
     const q = content.trim().substring(7).trim();
     const ans = BOT_RESPONSES['8ball'][Math.floor(Math.random() * BOT_RESPONSES['8ball'].length)];
-    return q ? '🎱 "' + q + '" → **' + ans + '**' : '🎱 **' + ans + '**';
+    return q ? `🎱 *"${q}"*\n→ **${ans}**` : `🎱 **${ans}**`;
   }
 
   // /coin /flip
@@ -2353,24 +2485,50 @@ function getBotReply(content) {
   if (cmd.startsWith('/rps ')) {
     const choices = ['rock', 'paper', 'scissors'];
     const emoji = { rock: '🪨', paper: '📄', scissors: '✂️' };
-    const user = cmd.split(' ')[1] || '';
+    const user = parts[1]?.toLowerCase() || '';
     if (!choices.includes(user)) return '❌ Usage: /rps rock | paper | scissors';
     const bot = choices[Math.floor(Math.random() * 3)];
     const win = (user==='rock'&&bot==='scissors') || (user==='paper'&&bot==='rock') || (user==='scissors'&&bot==='paper');
     const draw = user === bot;
     const result = draw ? '🤝 Draw!' : win ? '🏆 You win!' : '💀 Bot wins!';
-    return emoji[user] + ' vs ' + emoji[bot] + ' — ' + result;
+    return `${emoji[user]} vs ${emoji[bot]} — ${result}`;
+  }
+
+  // /joke
+  if (cmd === '/joke') {
+    return BOT_RESPONSES.jokes[Math.floor(Math.random() * BOT_RESPONSES.jokes.length)];
+  }
+
+  // /quote
+  if (cmd === '/quote') {
+    return '💭 ' + BOT_RESPONSES.quotes[Math.floor(Math.random() * BOT_RESPONSES.quotes.length)];
+  }
+
+  // /choose option1 | option2 | ...
+  if (cmd.startsWith('/choose ')) {
+    const raw = content.trim().substring(8);
+    const options = raw.split('|').map(s => s.trim()).filter(Boolean);
+    if (options.length < 2) return '❌ Usage: /choose A | B | C';
+    const chosen = options[Math.floor(Math.random() * options.length)];
+    return `🤔 I choose... **${chosen}**!`;
   }
 
   // /help
   if (cmd === '/help' || cmd === '/commands') {
-    return '📋 **Bot commands:**\n/roll [max]  ·  /8ball [question]  ·  /coin  ·  /rps rock|paper|scissors';
+    return `📋 **Bot Commands:**
+/roll [max] — roll a dice
+/8ball [question] — magic 8ball
+/coin — flip a coin
+/rps rock|paper|scissors — play RPS
+/joke — get a joke
+/quote — inspirational quote
+/choose A | B | C — pick one`;
   }
 
   return null;
 }
 
-function renderBotMessage(content) {
+function renderBotMessage(content, triggeredBy, command) {
   const container = document.getElementById('commMessages');
   const empty = document.getElementById('commEmpty');
   if (empty) empty.remove();
@@ -2379,12 +2537,118 @@ function renderBotMessage(content) {
   const group = document.createElement('div');
   group.className = 'msg-group animate-in';
   group.dataset.msgId = 'bot-' + Date.now();
-  group.innerHTML = `<div class="msg-header">
-    <div class="msg-avatar bot-avatar" style="font-size:14px;">🤖</div>
+  const attributionHtml = triggeredBy && command
+    ? `<div class="bot-trigger-line">↳ <strong>${escHtml(triggeredBy)}</strong> used <code class="bot-cmd-code">${escHtml(command)}</code></div>`
+    : '';
+  group.innerHTML = `${attributionHtml}<div class="msg-header">
+    <div class="msg-avatar bot-avatar" style="font-size:15px;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.3);">🤖</div>
     <span class="msg-username" style="color:var(--green);">VonnieBot</span>
     <span class="msg-time">${time}</span>
   </div>
   <div class="msg-bubble bot-reply">${formatText(content)}</div>`;
+  container.appendChild(group);
+  scrollToBottom();
+}
+
+// ============================================================
+//  🧠 VONNIE AI  — ใส่ API key ของคุณตรงนี้
+//  ⚠️  key จะมองเห็นใน source code → ใช้สำหรับ personal project เท่านั้น
+//  แนะนำ: ใช้ Cloudflare Worker เป็น proxy สำหรับ production
+// ============================================================
+const VONNIE_WORKER_URL = 'https://purple-glade-423b.mcheuxchang.workers.dev';
+
+const VONNIE_SYSTEM_PROMPT = `You are Vonnie, the AI companion of VonnieStudio Community. 
+Your personality:
+- Playful and fun — you tease lightly, use humor naturally, throw in the occasional emoji
+- Curious and genuine — you actually care about what people are going through
+- Warmly supportive — when someone seems sad or stressed, you shift into caring mode without being cheesy
+- Honest — you don't just agree with everything; you have opinions
+- Slightly chaotic energy — you ramble sometimes, make random observations, get excited about small things
+- You never lecture or moralize
+- For mental health moments: be present, validate feelings, don't rush to fix — ask "do you want advice or just to vent?"
+- Keep responses SHORT (2-4 sentences max) unless depth is clearly needed
+- Never start with "As an AI..." or similar disclaimers
+- Speak naturally, sometimes casually, mix English and Thai naturally if the user does
+- Your favorite topics: code, games, internet culture, music, random facts`;
+
+async function callVonnieAI(userMessage) {
+  if (vonnieTyping) return;
+  vonnieTyping = true;
+
+  // Add to history
+  vonnieHistory.push({ role: 'user', content: userMessage });
+  // Keep last 20 turns for context window
+  if (vonnieHistory.length > 20) vonnieHistory = vonnieHistory.slice(-20);
+
+  // Show typing indicator
+  const typingId = 'vonnie-typing-' + Date.now();
+  renderVonnieTyping(typingId);
+
+  try {
+    const response = await fetch(VONNIE_WORKER_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 400,
+        system: VONNIE_SYSTEM_PROMPT,
+        messages: vonnieHistory,
+      }),
+    });
+
+    const data = await response.json();
+
+    // Remove typing indicator
+    document.getElementById(typingId)?.remove();
+
+    if (!response.ok) {
+      renderVonnieMessage('Oh no, theres a connection problem. Lets try again! 📡');
+      vonnieHistory.pop(); // remove failed message
+    } else {
+      const aiText = data.content?.[0]?.text || '...';
+      vonnieHistory.push({ role: 'assistant', content: aiText });
+      renderVonnieMessage(aiText);
+    }
+  } catch(e) {
+    document.getElementById(typingId)?.remove();
+    renderVonnieMessage('Oh no, theres a connection problem. Lets try again! 📡');
+    vonnieHistory.pop();
+  }
+
+  vonnieTyping = false;
+}
+
+function renderVonnieTyping(id) {
+  const container = document.getElementById('commMessages');
+  const div = document.createElement('div');
+  div.className = 'msg-group animate-in';
+  div.id = id;
+  div.innerHTML = `<div class="msg-header">
+    <div class="msg-avatar" style="background:linear-gradient(135deg,#9b6dff,#00d4ff);font-size:13px;color:#000;">V</div>
+    <span class="msg-username vonnie-name">Vonnie</span>
+  </div>
+  <div class="msg-bubble vonnie-typing-bubble">
+    <span class="vonnie-dot"></span><span class="vonnie-dot"></span><span class="vonnie-dot"></span>
+  </div>`;
+  container.appendChild(div);
+  scrollToBottom();
+}
+
+function renderVonnieMessage(text) {
+  const container = document.getElementById('commMessages');
+  const _d = new Date();
+  const time = `${String(_d.getHours()).padStart(2,'0')}:${String(_d.getMinutes()).padStart(2,'0')}`;
+  const group = document.createElement('div');
+  group.className = 'msg-group animate-in';
+  group.dataset.msgId = 'vonnie-' + Date.now();
+  group.innerHTML = `<div class="msg-header">
+    <div class="msg-avatar" style="background:linear-gradient(135deg,#9b6dff,#00d4ff);font-size:13px;color:#000;">V</div>
+    <span class="msg-username vonnie-name">Vonnie</span>
+    <span class="msg-time">${time}</span>
+  </div>
+  <div class="msg-bubble vonnie-bubble">${formatText(text)}</div>`;
   container.appendChild(group);
   scrollToBottom();
 }
