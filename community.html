@@ -2670,11 +2670,11 @@ async function callVonnieAI(userMessage) {
       console.error('Vonnie Worker error:', response.status, errData);
       let friendlyMsg;
       if (response.status === 400 && errMsg.toLowerCase().includes('credit')) {
-        friendlyMsg = 'อุ๊ย... Vonnie ต้องพักก่อนนะ 🛌 (API credits หมดชั่วคราว เดี๋ยวกลับมา!)';
+        friendlyMsg = 'Oops... Vonnie needs to rest now 🛌 (API credits are temporarily out of stock. Ill be back soon!)';
       } else if (response.status === 529 || response.status === 503) {
-        friendlyMsg = 'เซิร์ฟเวอร์แน่นมากเลยตอนนี้ รอแป๊บแล้วลองใหม่นะ~ 🐢';
+        friendlyMsg = 'The server is very busy right now. Please wait a moment and try again~ 🐢';
       } else {
-        friendlyMsg = `ขอโทษนะ มีปัญหาเล็กน้อย (${response.status}) ลองใหม่อีกทีได้เลย 🛠️`;
+        friendlyMsg = `Sorry about that! There's a small issue (${response.status}) - please try again later 🛠️`;
       }
       renderVonnieMessage(friendlyMsg);
       vonnieHistory.pop();
