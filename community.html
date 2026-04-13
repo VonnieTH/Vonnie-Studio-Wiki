@@ -1797,8 +1797,11 @@ function subscribeRealtime() {
         const isVonnie = payload.new.is_vonnie === true;
         const isBotMsg  = !!payload.new.bot_name;
 
-        // Vonnie AI messages: use Vonnie identity, skip profile fetch
+        // Vonnie AI messages: localRenderedIds already set before insert, so
+        // if we reach here the id was NOT in the set → this is another user's client seeing it
         if (isVonnie) {
+          // If this Vonnie message was sent by current user's session, skip (already rendered)
+          if (payload.new.user_id === currentUser?.id) return;
           renderMessage({
             ...payload.new,
             profiles:   { username:'Vonnie', avatar_color:'#9b6dff', avatar_url:null },
@@ -1971,6 +1974,7 @@ window.sendMessage = async function() {
 
   // ── AI ROOM ──────────────────────────────────────────────
   if (currentRoomMode === 'ai') {
+    btn.disabled = true; // prevent double-send
     input.value = ''; input.style.height = 'auto';
     document.getElementById('charCounter').textContent = '';
     cancelReply();
@@ -1979,6 +1983,7 @@ window.sendMessage = async function() {
       user_id: currentUser.id, room_id: currentRoomId, content
     }).select().single();
     if (aiInserted) {
+      localRenderedIds.add(aiInserted.id); // ← กัน Realtime render ซ้ำ
       let badges=[];
       try{const{data:b}=await supabase.from('user_badges').select('badge_id').eq('user_id',currentUser.id);badges=b||[];}catch(e){}
       renderMessage({...aiInserted,profiles:currentProfile,userBadges:badges.map(b=>b.badge_id),reactions:[],replyMsg:null,replyProf:null,replyCount:0},false,false,true);
@@ -1986,6 +1991,7 @@ window.sendMessage = async function() {
     }
     // Call Vonnie AI
     await callVonnieAI(content);
+    btn.disabled = false; input.focus();
     return;
   }
   btn.disabled=true;
@@ -2004,6 +2010,7 @@ window.sendMessage = async function() {
 
   const {data:inserted,error}=await supabase.from('messages').insert(insertPayload).select().single();
   if(!error&&inserted){
+    localRenderedIds.add(inserted.id); // ← กัน Realtime render ซ้ำ
     let badges=[];
     try{const {data:b}=await supabase.from('user_badges').select('badge_id').eq('user_id',currentUser.id);badges=b||[];}catch(e){}
     let replyMsg=null,replyProf=null;
@@ -2646,9 +2653,7 @@ function renderBotMessage(content, triggeredBy, command, dbId) {
 }
 
 // ============================================================
-//  🧠 VONNIE AI  — ใส่ API key ของคุณตรงนี้
-//  ⚠️  key จะมองเห็นใน source code → ใช้สำหรับ personal project เท่านั้น
-//  แนะนำ: ใช้ Cloudflare Worker เป็น proxy สำหรับ production
+//  🧠 VONNIE AI
 // ============================================================
 const VONNIE_WORKER_URL = 'https://purple-glade-423b.mcheuxchang.workers.dev';
 
@@ -2713,6 +2718,9 @@ async function callVonnieAI(userMessage) {
       saveVonnieMemory(); // บันทึกความทรงจำ
 
       // ── Save Vonnie's reply to Supabase so everyone sees it + persists on reload ──
+      // optimistically reserve a placeholder so Realtime event (which may fire
+      // before the await resolves) cannot sneak in and render a duplicate
+      const _vonnieTempKey = '__vonnie_pending__' + Date.now();
       const { data: saved, error: saveErr } = await supabase.from('messages').insert({
         user_id:   currentUser.id,
         room_id:   currentRoomId,
