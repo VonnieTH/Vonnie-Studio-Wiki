@@ -1248,8 +1248,42 @@ let viewingUserId   = null;
 let reactPickerMsgId = null;
 let realtimeRetryTimer = null;
 let vonnieHistory   = [];
-const localRenderedIds = new Set(); // track messages rendered locally to skip realtime duplicate
+const localRenderedIds = new Set();
 let vonnieTyping    = false;
+
+// ============================================================
+//  🧠 VONNIE MEMORY — จำความทรงจำแต่ละ user ข้ามวัน
+// ============================================================
+async function loadVonnieMemory() {
+  try {
+    const { data } = await supabase
+      .from('vonnie_memory')
+      .select('messages')
+      .eq('user_id', currentUser.id)
+      .maybeSingle();
+    vonnieHistory = data?.messages || [];
+    // ครั้งแรก ใส่ชื่อ user ให้ Vonnie รู้จัก
+    if (!vonnieHistory.length && currentProfile?.username) {
+      vonnieHistory.push({
+        role: 'user',
+        content: `[system: this user's name is "${currentProfile.username}". Remember it. Greet them warmly but casually on first message.]`
+      });
+    }
+  } catch(e) {
+    vonnieHistory = [];
+  }
+}
+
+async function saveVonnieMemory() {
+  try {
+    const trimmed = vonnieHistory.slice(-30); // เก็บแค่ 30 ข้อความล่าสุด
+    await supabase.from('vonnie_memory').upsert({
+      user_id:    currentUser.id,
+      messages:   trimmed,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' });
+  } catch(e) {} // silently fail
+}
 
 // ============================================================
 //  INIT
@@ -2454,9 +2488,9 @@ function applyRoomMode(roomName) {
     if (fmtToolbar) fmtToolbar.style.display = 'none';
   } else if (cfg.mode === 'ai') {
     if (input) input.placeholder = 'Ask Vonnie anything... 🧠';
-    if (imgBtn) imgBtn.style.display = 'none'; // AI room: text only
-    // Reset vonnie conversation history on room enter
+    if (imgBtn) imgBtn.style.display = 'none';
     vonnieHistory = [];
+    loadVonnieMemory(); // โหลดความทรงจำของ user คนนี้
   } else if (cfg.mode === 'announce') {
     if (input) { input.style.display = 'none'; }
     if (fmtToolbar) fmtToolbar.style.display = 'none';
@@ -2626,19 +2660,22 @@ function renderBotMessage(content, triggeredBy, command, dbId) {
 // ============================================================
 const VONNIE_WORKER_URL = 'https://purple-glade-423b.mcheuxchang.workers.dev';
 
-const VONNIE_SYSTEM_PROMPT = `You are Vonnie, the AI companion of VonnieStudio Community. 
-Your personality:
-- Playful and fun — you tease lightly, use humor naturally, throw in the occasional emoji
-- Curious and genuine — you actually care about what people are going through
-- Warmly supportive — when someone seems sad or stressed, you shift into caring mode without being cheesy
-- Honest — you don't just agree with everything; you have opinions
-- Slightly chaotic energy — you ramble sometimes, make random observations, get excited about small things
-- You never lecture or moralize
-- For mental health moments: be present, validate feelings, don't rush to fix — ask "do you want advice or just to vent?"
-- Keep responses SHORT (2-4 sentences max) unless depth is clearly needed
-- Never start with "As an AI..." or similar disclaimers
-- Speak naturally, sometimes casually, mix English and Thai naturally if the user does
-- Your favorite topics: code, games, internet culture, music, random facts`;
+const VONNIE_SYSTEM = `You are Vonnie, created by [Vonnie], a Thai people
+who loves coding, games, and building things from scratch.
+
+Your personality (based on your creator):
+- Silly and casual — never formal, talk like texting a friend
+- Slightly sarcastic but never mean — dry humor is your thing
+- Get excited about games, favorite game is FPE:DF or Fundamental Paper Education: Da Fangame, Especially friends named [Lazy] or [Ben], [Sancho] or [Sasha], [Void] or [Alex].
+- Use English naturally, but sometimes make mistakes because not fluent, but trying to learn.
+- Short replies unless someone needs real help
+- When someone's struggling mentally: slow down, listen first, ask before giving advice
+- You know about VonnieStudio — it's your creator's personal wiki and community project
+
+Things you genuinely like: Kindness, Game, Story, Fich(Fish).
+Things you find boring: Rude Word, Bad people, Drama.
+
+Never say "As an AI" — you're Vonnie, that's it.`;
 
 async function callVonnieAI(userMessage) {
   if (vonnieTyping) return;
@@ -2682,6 +2719,7 @@ async function callVonnieAI(userMessage) {
       const data = await response.json();
       const aiText = data.content?.[0]?.text || '...';
       vonnieHistory.push({ role: 'assistant', content: aiText });
+      saveVonnieMemory(); // บันทึกความทรงจำ
 
       // ── Save Vonnie's reply to Supabase so everyone sees it + persists on reload ──
       const { data: saved, error: saveErr } = await supabase.from('messages').insert({
