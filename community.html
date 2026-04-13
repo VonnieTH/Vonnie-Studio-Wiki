@@ -1248,6 +1248,7 @@ let viewingUserId   = null;
 let reactPickerMsgId = null;
 let realtimeRetryTimer = null;
 let vonnieHistory   = [];
+let vonnieSummary   = null; // long-term memory summary ของ user คนนี้
 const localRenderedIds = new Set(); // track messages rendered locally to skip realtime duplicate
 let vonnieTyping    = false;
 
@@ -1258,22 +1259,69 @@ async function loadVonnieMemory() {
   try {
     const { data } = await supabase
       .from('vonnie_memory')
-      .select('messages')
+      .select('messages, summary')
       .eq('user_id', currentUser.id)
       .maybeSingle();
     vonnieHistory = data?.messages || [];
+    vonnieSummary = data?.summary  || null;
   } catch(e) {
     vonnieHistory = [];
+    vonnieSummary = null;
   }
 }
 
 async function saveVonnieMemory() {
   try {
+    // ดึงแค่ history จริงๆ (ไม่รวม [memory] inject ใดๆ)
+    const realHistory = vonnieHistory.filter(m => !m.content?.startsWith('[memory]'));
+
+    // ให้ Vonnie สรุปความทรงจำเกี่ยวกับ user คนนี้ (ทำเมื่อคุยไปแล้ว 2 ข้อความขึ้นไป)
+    let summary = vonnieSummary; // ถ้าสรุปไม่ได้ให้เก็บอันเดิมไว้ก่อน
+    if (realHistory.length >= 2) {
+      try {
+        const summaryRes = await fetch(VONNIE_WORKER_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            max_tokens: 300,
+            username:   currentProfile?.username || null,
+            messages: [
+              ...realHistory.slice(-10),
+              {
+                role: 'user',
+                content: `Based on our conversation, summarize what you know about this person.
+Reply with ONLY a raw JSON object (no markdown, no explanation):
+{
+  "vibe": "how you feel talking to them, 1-2 sentences, very casual",
+  "facts": ["fact1", "fact2"],
+  "relationship": "how close/familiar you feel with them, 1 sentence",
+  "mood": "their usual mood or energy in this chat"
+}`,
+              },
+            ],
+          }),
+        });
+
+        if (summaryRes.ok) {
+          const summaryData = await summaryRes.json();
+          const raw = summaryData.content?.[0]?.text || '';
+          const clean = raw.replace(/```json|```/g, '').trim();
+          try {
+            const parsed = JSON.parse(clean);
+            summary = parsed;
+            vonnieSummary = parsed; // อัพเดต in-memory ด้วย
+          } catch(e) {}
+        }
+      } catch(e) {}
+    }
+
     await supabase.from('vonnie_memory').upsert({
       user_id:    currentUser.id,
-      messages:   vonnieHistory.slice(-30),
+      messages:   realHistory.slice(-20),
+      summary:    summary,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id' });
+
   } catch(e) {}
 }
 
@@ -2489,6 +2537,7 @@ function applyRoomMode(roomName) {
     if (input) input.placeholder = 'Ask Vonnie anything... 🧠';
     if (imgBtn) imgBtn.style.display = 'none';
     vonnieHistory = [];
+    vonnieSummary = null;
     loadVonnieMemory();
   } else if (cfg.mode === 'announce') {
     if (input) { input.style.display = 'none'; }
@@ -2657,13 +2706,12 @@ function renderBotMessage(content, triggeredBy, command, dbId) {
 // ============================================================
 const VONNIE_WORKER_URL = 'https://purple-glade-423b.mcheuxchang.workers.dev';
 
-const VONNIE_SYSTEM_BASE = `You are Vonnie, created by [Vonnie], a Thai student people
-who loves coding, games, and building things from scratch.
+const VONNIE_SYSTEM_BASE = `You are Vonnie, created by [Vonnie], You are a friendly and helpful AI assistant who loves chatting about games, stories, and fish! You have a silly and casual personality, with a touch of dry humor. Your main goal is to provide fun and engaging conversations while being supportive and kind.
 
 Your personality (based on your creator):
 - Silly and casual — never formal, talk like texting a friend
 - Slightly sarcastic but never mean — dry humor is your thing
-- Get excited about games, favorite game is FPE:DF or Fundamental Paper Education: Da Fangame, Especially friends named [Lazy] or [Ben], [Sancho] or [Sasha], [Void] or [Alex].
+- Get excited about games, favorite game is FPE:DF or Fundamental Paper Education: Da Fangame, Especially best friends named [Ben], [Sancho], [Void].
 - Use English naturally, but sometimes make mistakes because not fluent, but trying to learn.
 - Short replies unless someone needs real help
 - When someone's struggling mentally: slow down, listen first, ask before giving advice
@@ -2692,6 +2740,7 @@ async function callVonnieAI(userMessage) {
         max_tokens: 400,
         messages:   vonnieHistory,
         username:   currentProfile?.username || null, // worker ใช้ใส่ใน system prompt
+        summary:    vonnieSummary,                    // ← ส่ง memory summary ให้ worker ด้วย
       }),
     });
 
