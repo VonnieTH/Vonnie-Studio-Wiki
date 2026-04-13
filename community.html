@@ -230,6 +230,47 @@
 .pview-info{padding:10px 20px 0;text-align:center;}
 .pview-name{font-family:var(--mono);font-size:18px;color:var(--text-main);letter-spacing:.04em;}
 .pview-role{font-family:var(--mono);font-size:9px;color:var(--cyan);letter-spacing:.14em;margin-top:3px;text-shadow:0 0 8px var(--cyan);}
+/* ── ROLE BADGES inline in messages ── */
+.role-badge{font-family:var(--mono);font-size:7px;padding:1px 5px;border:1px solid;letter-spacing:.08em;border-radius:2px;vertical-align:middle;margin-left:4px;white-space:nowrap;}
+.role-badge.owner{color:#f0c040;border-color:rgba(240,192,64,.5);background:rgba(240,192,64,.1);}
+.role-badge.admin{color:#ff7eb6;border-color:rgba(255,126,182,.5);background:rgba(255,126,182,.1);}
+.role-badge.mod{color:#5eeaff;border-color:rgba(94,234,255,.4);background:rgba(94,234,255,.08);}
+/* ── Admin action button ── */
+.msg-action-btn.admin-act:hover{border-color:#ff7eb6;color:#ff7eb6;background:rgba(255,126,182,.08);}
+/* ── Admin panel modal ── */
+.admin-overlay{display:none;position:fixed;inset:0;z-index:9700;background:rgba(0,0,0,.88);align-items:center;justify-content:center;}
+.admin-overlay.open{display:flex;animation:fadeUp .2s ease both;}
+.admin-box{width:380px;max-width:92vw;background:var(--bg-card);border:1px solid rgba(255,126,182,.5);box-shadow:0 0 40px rgba(255,126,182,.2);position:relative;display:flex;flex-direction:column;}
+.admin-box::before,.admin-box::after{content:"";position:absolute;width:8px;height:8px;border-color:#ff7eb6;border-style:solid;pointer-events:none;}
+.admin-box::before{top:-1px;left:-1px;border-width:2px 0 0 2px;}
+.admin-box::after{bottom:-1px;right:-1px;border-width:0 2px 2px 0;}
+.admin-header{background:rgba(255,126,182,.07);border-bottom:1px solid rgba(255,126,182,.3);padding:8px 16px;font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:#ff7eb6;display:flex;justify-content:space-between;align-items:center;}
+.admin-close{background:none;border:none;color:var(--text-sub);font-family:var(--mono);font-size:12px;cursor:pointer;}
+.admin-close:hover{color:#ff7eb6;}
+.admin-body{padding:18px 16px;display:flex;flex-direction:column;gap:10px;}
+.admin-target{font-family:var(--mono);font-size:11px;color:var(--text-sub);padding:8px 12px;background:rgba(255,126,182,.04);border:1px solid rgba(255,126,182,.15);}
+.admin-target strong{color:#ff7eb6;}
+.admin-section{font-family:var(--mono);font-size:9px;color:var(--text-dim);letter-spacing:.14em;margin-top:4px;}
+.admin-btn{font-family:var(--mono);font-size:10px;letter-spacing:.1em;padding:9px 14px;border:1px solid;background:transparent;cursor:pointer;transition:all .15s;text-align:left;width:100%;}
+.admin-btn.del-msg{border-color:rgba(255,107,107,.35);color:#ff6b6b;}
+.admin-btn.del-msg:hover{background:rgba(255,107,107,.08);border-color:#ff6b6b;}
+.admin-btn.timeout{border-color:rgba(240,192,64,.35);color:var(--gold);}
+.admin-btn.timeout:hover{background:rgba(240,192,64,.08);border-color:var(--gold);}
+.admin-btn.grant-mod{border-color:rgba(94,234,255,.35);color:#5eeaff;}
+.admin-btn.grant-mod:hover{background:rgba(94,234,255,.08);border-color:#5eeaff;}
+.admin-btn.revoke-mod{border-color:rgba(255,107,107,.25);color:var(--text-dim);}
+.admin-btn.revoke-mod:hover{background:rgba(255,107,107,.06);border-color:#ff6b6b;color:#ff6b6b;}
+.admin-btn:disabled{opacity:.35;cursor:not-allowed;}
+.admin-log{font-family:var(--mono);font-size:9px;color:var(--text-dim);padding:6px 12px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.06);margin-top:4px;min-height:22px;}
+.admin-log.ok{color:var(--green);}
+.admin-log.err{color:#ff6b6b;}
+/* timeout duration picker */
+.timeout-row{display:flex;gap:6px;flex-wrap:wrap;}
+.timeout-opt{font-family:var(--mono);font-size:9px;padding:4px 10px;border:1px solid rgba(240,192,64,.3);background:transparent;color:var(--gold);cursor:pointer;transition:all .15s;}
+.timeout-opt:hover,.timeout-opt.selected{background:rgba(240,192,64,.12);border-color:var(--gold);}
+/* muted badge on input */
+.muted-bar{display:none;padding:8px 18px;background:rgba(240,192,64,.06);border-top:1px solid rgba(240,192,64,.2);font-family:var(--mono);font-size:10px;color:var(--gold);letter-spacing:.08em;}
+.muted-bar.show{display:flex;align-items:center;gap:8px;}
 /* Bio */
 .pview-bio{font-family:var(--mono);font-size:11px;color:var(--text-sub);line-height:1.7;text-align:center;padding:10px 20px 0;font-style:italic;}
 .pview-bio-empty{color:var(--text-dim);}
@@ -716,6 +757,66 @@
   </div>
 </div>
 
+<!-- MUTED BAR (shown above input when user is timed out) -->
+<div class="muted-bar" id="mutedBar">
+  <i class="fa-solid fa-clock" style="font-size:11px;"></i>
+  <span id="mutedBarText">You are timed out.</span>
+</div>
+
+<!-- ADMIN PANEL MODAL -->
+<div class="admin-overlay" id="adminModal" onclick="if(event.target===this)closeAdminModal()">
+  <div class="admin-box">
+    <div class="admin-header">
+      <span>// ADMIN_PANEL.EXE</span>
+      <button class="admin-close" onclick="closeAdminModal()">[ X ]</button>
+    </div>
+    <div class="admin-body">
+      <div class="admin-target">Target: <strong id="adminTargetName">---</strong> <span id="adminTargetRoleBadge"></span></div>
+
+      <!-- Message actions (shown when opened from a message) -->
+      <div id="adminMsgSection">
+        <div class="admin-section">// MESSAGE</div>
+        <button class="admin-btn del-msg" id="adminDelMsgBtn" onclick="adminDeleteMessage()">
+          🗑 Delete this message
+        </button>
+      </div>
+
+      <!-- User actions -->
+      <div class="admin-section">// USER ACTIONS</div>
+      <div id="timeoutSection">
+        <div class="timeout-row" id="timeoutOptRow">
+          <button class="timeout-opt" data-min="10" onclick="selectTimeout(this)">10m</button>
+          <button class="timeout-opt" data-min="60" onclick="selectTimeout(this)">1h</button>
+          <button class="timeout-opt selected" data-min="1440" onclick="selectTimeout(this)">1d</button>
+          <button class="timeout-opt" data-min="10080" onclick="selectTimeout(this)">7d</button>
+        </div>
+        <button class="admin-btn timeout" id="adminTimeoutBtn" onclick="adminTimeoutUser()" style="margin-top:6px;">
+          ⏱ Timeout user (above duration)
+        </button>
+        <button class="admin-btn revoke-mod" id="adminRemoveTimeoutBtn" onclick="adminRemoveTimeout()" style="margin-top:4px;">
+          ✓ Remove timeout
+        </button>
+      </div>
+
+      <!-- Role management (owner only) -->
+      <div id="roleSection" style="display:none;">
+        <div class="admin-section">// ROLE MANAGEMENT</div>
+        <button class="admin-btn grant-mod" id="adminGrantModBtn" onclick="adminSetRole('mod')">
+          🛡 Promote to Mod
+        </button>
+        <button class="admin-btn grant-mod" id="adminGrantAdminBtn" onclick="adminSetRole('admin')" style="margin-top:4px;">
+          ⭐ Promote to Admin
+        </button>
+        <button class="admin-btn revoke-mod" id="adminRevokeRoleBtn" onclick="adminSetRole('member')" style="margin-top:4px;">
+          ↓ Demote to Member
+        </button>
+      </div>
+
+      <div class="admin-log" id="adminLog">// Ready</div>
+    </div>
+  </div>
+</div>
+
 <!-- THREAD MODAL -->
 <div class="thread-overlay" id="threadOverlay" onclick="if(event.target===this)closeThread()">
   <div class="thread-box">
@@ -1145,7 +1246,7 @@ async function loadThreadReplies(parentId) {
     return;
   }
   const uids = [...new Set(data.map(m => m.user_id))];
-  const { data: profs } = await supabase.from('profiles').select('id,username,avatar_color,avatar_url').in('id', uids);
+  const { data: profs } = await supabase.from('profiles').select('id,username,avatar_color,avatar_url,role').in('id', uids);
   const pm = {}; (profs||[]).forEach(p => { pm[p.id] = p; });
   data.forEach(msg => {
     const p = pm[msg.user_id] || {};
@@ -1356,6 +1457,7 @@ async function showCommunity() {
   await loadTotalMembers();
   initPresence();
   initNotifications();
+  checkMuted();
 }
 
 // ============================================================
@@ -1558,7 +1660,7 @@ async function loadMessages() {
   }
   const msgIds=data.map(m=>m.id);
   const userIds=[...new Set(data.map(m=>m.user_id).filter(Boolean))];
-  const {data:profiles}=await supabase.from('profiles').select('id,username,avatar_color,avatar_url').in('id',userIds);
+  const {data:profiles}=await supabase.from('profiles').select('id,username,avatar_color,avatar_url,role').in('id',userIds);
   const profileMap={};
   (profiles||[]).forEach(p=>{profileMap[p.id]=p;});
 
@@ -1704,7 +1806,15 @@ function renderMessage(msg, prepend=false, isFirstUnread=false, animate=false) {
   const reactBtn = (isVonnie || isBotMsg) ? '' : `<button class="msg-action-btn" onclick="openReactPicker(event,'${msg.id}')">😊 React</button>`;
   const replyBtn = (isVonnie || isBotMsg) ? '' : `<button class="msg-action-btn" onclick="startReply('${msg.id}','${escHtml(username)}',\`${safeContent}\`)">↩ Reply</button>`;
   const pinBtn   = (isVonnie || isBotMsg) ? '' : `<button class="msg-action-btn pin" onclick="pinMessage('${msg.id}')">📌 Pin</button>`;
-  const delBtn   = (!isVonnie && !isBotMsg && isOwn) ? `<button class="msg-action-btn del" onclick="deleteMessage('${msg.id}')">DEL</button>` : '';
+  const msgRole  = isVonnie ? null : (msg.profiles?.role || 'member');
+  const roleBadgeHtml = getRoleBadgeHtml(msgRole);
+  // Can this viewer admin-action this message?
+  const myRole   = currentProfile?.role || 'member';
+  const canAdmin = !isVonnie && !isBotMsg && !isOwn && canModerate(myRole, msgRole);
+  const delBtn   = (!isVonnie && !isBotMsg && (isOwn || canModerate(myRole, msgRole)))
+    ? `<button class="msg-action-btn del" onclick="deleteMessage('${msg.id}')">DEL</button>` : '';
+  const adminBtn = canAdmin
+    ? `<button class="msg-action-btn admin-act" onclick="openAdminPanel('${msg.id}','${msg.user_id}','${escHtml(username)}','${msgRole}')">🛡 Admin</button>` : '';
 
   const usernameClass = isVonnie ? 'msg-username vonnie-name'
                       : isBotMsg ? 'msg-username' 
@@ -1720,9 +1830,9 @@ function renderMessage(msg, prepend=false, isFirstUnread=false, animate=false) {
 
   let html=`${replyHtml}${botAttrHtml}<div class="msg-header">
     <div class="msg-avatar" style="${avatarStyle}" ${avatarClick}>${avatarInner}</div>
-    <span class="${usernameClass}" style="${botNameStyle}" ${nameClick}>${escHtml(username)}</span>
+    <span class="${usernameClass}" style="${botNameStyle}" ${nameClick}>${escHtml(username)}</span>${roleBadgeHtml}
     <span class="msg-time">${time}</span>
-    <div class="msg-actions">${reactBtn}${replyBtn}${pinBtn}${delBtn}</div>
+    <div class="msg-actions">${reactBtn}${replyBtn}${pinBtn}${delBtn}${adminBtn}</div>
   </div>`;
   const bubbleClass = isVonnie ? 'msg-bubble vonnie-bubble'
                     : isBotMsg ? 'msg-bubble bot-reply'
@@ -1877,7 +1987,7 @@ function subscribeRealtime() {
         }
 
         const [{ data: profile }, { data: badges }] = await Promise.all([
-          supabase.from('profiles').select('id,username,avatar_color,avatar_url').eq('id', payload.new.user_id).single(),
+          supabase.from('profiles').select('id,username,avatar_color,avatar_url,role').eq('id', payload.new.user_id).single(),
           supabase.from('user_badges').select('badge_id').eq('user_id', payload.new.user_id),
         ]);
 
@@ -1960,6 +2070,8 @@ window.sendMessage = async function() {
   const input=document.getElementById('commInput');
   const content=input.value.trim();
   const btn=document.getElementById('sendBtn');
+  // ── Check mute status ───────────────────────────────────
+  if (currentProfile?.muted_until && new Date(currentProfile.muted_until) > new Date()) return;
   if(!content&&!selectedFile) return;
   if(!currentRoomId) return;
 
@@ -2083,6 +2195,7 @@ window.sendMessage = async function() {
 };
 
 window.deleteMessage=async function(id){
+  // Allow own delete OR mod/admin delete (permission already checked in renderMessage)
   await supabase.from('messages').delete().eq('id',id);
   const el=document.querySelector(`[data-msg-id="${id}"]`);
   if(el) el.remove();
@@ -2249,7 +2362,11 @@ window.viewProfile=async function(userId){
   setAvatarEl(document.getElementById('pviewAvatar'),prof.avatar_url,color,uname[0].toUpperCase());
   // Name + role
   document.getElementById('pviewName').textContent=uname;
-  document.getElementById('pviewRole').textContent= prof.role ? `// ${prof.role}` : '// Community Member';
+  const roleLabel = prof.role && prof.role !== 'member' ? prof.role.toUpperCase() : null;
+  const pviewRoleEl = document.getElementById('pviewRole');
+  pviewRoleEl.innerHTML = roleLabel
+    ? `// <span class="role-badge ${prof.role}" style="font-size:10px;padding:2px 7px;">${roleLabel}</span>`
+    : '// Community Member';
   // Bio
   const bioEl=document.getElementById('pviewBio');
   if(prof.bio){bioEl.textContent='"'+prof.bio+'"';bioEl.classList.remove('pview-bio-empty');}
@@ -2472,6 +2589,155 @@ document.addEventListener('keydown',e=>{
     document.getElementById('emojiPicker').classList.remove('open');emojiPickerOpen=false;
   }
 });
+
+// ============================================================
+//  ADMIN SYSTEM
+// ============================================================
+// Role hierarchy: owner > admin > mod > member
+const ROLE_RANK = { owner: 4, admin: 3, mod: 2, member: 1 };
+const ROLE_LABELS = { owner:'OWNER', admin:'ADMIN', mod:'MOD', member:'' };
+const ROLE_COLORS = { owner:'#f0c040', admin:'#ff7eb6', mod:'#5eeaff', member:'' };
+
+function getRank(role) { return ROLE_RANK[role] || 1; }
+
+// Can `myRole` moderate a user/msg of `targetRole`?
+function canModerate(myRole, targetRole) {
+  if (myRole === 'member') return false;
+  return getRank(myRole) > getRank(targetRole || 'member');
+}
+
+function getRoleBadgeHtml(role) {
+  if (!role || role === 'member') return '';
+  const label = ROLE_LABELS[role] || '';
+  if (!label) return '';
+  return `<span class="role-badge ${role}">${label}</span>`;
+}
+
+// ── Admin panel state ──────────────────────────────────────
+let adminPanel = { msgId: null, targetUserId: null, targetUsername: null, targetRole: null, timeoutMin: 1440 };
+
+window.openAdminPanel = function(msgId, userId, username, role) {
+  adminPanel = { msgId, targetUserId: userId, targetUsername: username, targetRole: role, timeoutMin: 1440 };
+  const myRole = currentProfile?.role || 'member';
+  document.getElementById('adminTargetName').textContent = username;
+  document.getElementById('adminTargetRoleBadge').innerHTML = getRoleBadgeHtml(role);
+  document.getElementById('adminLog').textContent = '// Ready';
+  document.getElementById('adminLog').className = 'admin-log';
+
+  // Show/hide sections based on my role
+  document.getElementById('adminMsgSection').style.display = msgId ? '' : 'none';
+  document.getElementById('timeoutSection').style.display = (myRole === 'mod' || myRole === 'admin' || myRole === 'owner') ? '' : 'none';
+  document.getElementById('roleSection').style.display = (myRole === 'owner') ? '' : 'none';
+
+  // Disable promote/grant if target is already that rank or higher
+  const targetRank = getRank(role);
+  const myRank = getRank(myRole);
+  if (document.getElementById('adminGrantModBtn'))
+    document.getElementById('adminGrantModBtn').disabled = (targetRank >= 2 || myRank < 4);
+  if (document.getElementById('adminGrantAdminBtn'))
+    document.getElementById('adminGrantAdminBtn').disabled = (targetRank >= 3 || myRank < 4);
+  if (document.getElementById('adminRevokeRoleBtn'))
+    document.getElementById('adminRevokeRoleBtn').disabled = (targetRank <= 1 || myRank < 4);
+
+  // Reset timeout selection
+  document.querySelectorAll('.timeout-opt').forEach(b => b.classList.toggle('selected', b.dataset.min === '1440'));
+  document.getElementById('adminModal').classList.add('open');
+};
+window.closeAdminModal = function() {
+  document.getElementById('adminModal').classList.remove('open');
+};
+window.selectTimeout = function(btn) {
+  document.querySelectorAll('.timeout-opt').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  adminPanel.timeoutMin = parseInt(btn.dataset.min);
+};
+
+// ── Admin actions ──────────────────────────────────────────
+function adminLog(msg, ok=true) {
+  const el = document.getElementById('adminLog');
+  el.textContent = msg;
+  el.className = 'admin-log ' + (ok ? 'ok' : 'err');
+}
+
+window.adminDeleteMessage = async function() {
+  if (!adminPanel.msgId) return;
+  const myRole = currentProfile?.role || 'member';
+  if (!canModerate(myRole, adminPanel.targetRole)) return adminLog('// Access denied', false);
+  try {
+    await supabase.from('messages').delete().eq('id', adminPanel.msgId);
+    document.querySelector(`[data-msg-id="${adminPanel.msgId}"]`)?.remove();
+    adminLog('// Message deleted ✓');
+    setTimeout(closeAdminModal, 800);
+  } catch(e) { adminLog('// Error: ' + e.message, false); }
+};
+
+window.adminTimeoutUser = async function() {
+  if (!adminPanel.targetUserId) return;
+  const myRole = currentProfile?.role || 'member';
+  if (!canModerate(myRole, adminPanel.targetRole)) return adminLog('// Access denied', false);
+  const until = new Date(Date.now() + adminPanel.timeoutMin * 60 * 1000).toISOString();
+  try {
+    // Store timeout in profiles.muted_until
+    await supabase.from('profiles').update({ muted_until: until }).eq('id', adminPanel.targetUserId);
+    adminLog(`// Timeout set until ${new Date(until).toLocaleString()} ✓`);
+    setTimeout(closeAdminModal, 1200);
+  } catch(e) { adminLog('// Error: ' + e.message, false); }
+};
+
+window.adminRemoveTimeout = async function() {
+  if (!adminPanel.targetUserId) return;
+  const myRole = currentProfile?.role || 'member';
+  if (!canModerate(myRole, adminPanel.targetRole)) return adminLog('// Access denied', false);
+  try {
+    await supabase.from('profiles').update({ muted_until: null }).eq('id', adminPanel.targetUserId);
+    adminLog('// Timeout removed ✓');
+    setTimeout(closeAdminModal, 800);
+  } catch(e) { adminLog('// Error: ' + e.message, false); }
+};
+
+window.adminSetRole = async function(newRole) {
+  if (!adminPanel.targetUserId) return;
+  const myRole = currentProfile?.role || 'member';
+  // Only owner can change roles, and cannot self-assign or assign owner
+  if (myRole !== 'owner') return adminLog('// Owner only', false);
+  if (adminPanel.targetUserId === currentUser?.id) return adminLog('// Cannot change own role', false);
+  if (newRole === 'owner') return adminLog('// Cannot assign owner role', false);
+  try {
+    await supabase.from('profiles').update({ role: newRole }).eq('id', adminPanel.targetUserId);
+    adminLog(`// Role → ${newRole} ✓`);
+    setTimeout(closeAdminModal, 800);
+  } catch(e) { adminLog('// Error: ' + e.message, false); }
+};
+
+// ── Mute check on init + room enter ────────────────────────
+async function checkMuted() {
+  if (!currentUser) return;
+  try {
+    const { data } = await supabase.from('profiles').select('muted_until').eq('id', currentUser.id).single();
+    if (data?.muted_until && new Date(data.muted_until) > new Date()) {
+      const until = new Date(data.muted_until);
+      const bar = document.getElementById('mutedBar');
+      const txt = document.getElementById('mutedBarText');
+      const sendBtn = document.getElementById('sendBtn');
+      const input = document.getElementById('commInput');
+      const imgBtn = document.querySelector('.comm-img-btn');
+      const fmt = document.querySelector('.fmt-toolbar');
+      if (bar) bar.classList.add('show');
+      if (txt) {
+        const mins = Math.ceil((until - new Date()) / 60000);
+        txt.textContent = `⏱ You are timed out for ${mins < 60 ? mins + ' min' : Math.ceil(mins/60) + 'h'}. Until: ${until.toLocaleString()}`;
+      }
+      if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = '[ MUTED ]'; }
+      if (input) { input.disabled = true; input.placeholder = 'You are timed out...'; }
+      if (imgBtn) imgBtn.disabled = true;
+      if (fmt) fmt.style.opacity = '0.3';
+      currentProfile = { ...currentProfile, muted_until: data.muted_until };
+    }
+  } catch(e) {}
+}
+
+// ── Profile view: show role ─────────────────────────────────
+// Patch into viewProfile — role is in prof.role from select('*')
 
 // ============================================================
 //  ROOM CONFIG — special behaviors per channel
