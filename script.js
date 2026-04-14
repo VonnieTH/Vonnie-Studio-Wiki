@@ -49,7 +49,6 @@ function navigate(page) {
   // Update page title
   var titles = { home:'HOME', about:'ABOUT_ME', projects:'PROJECTS', contact:'CONTACT' };
   var titleEl = target && target.querySelector('.page-title');
-  if (titleEl) titleEl.textContent = '// ' + (titles[page] || page.toUpperCase());
 
   currentPage = page;
   window.scrollTo(0, 0);
@@ -297,7 +296,7 @@ function doSearch(q) {
            item.desc.toLowerCase().indexOf(q) !== -1;
   });
   if (!hits.length) {
-    results.innerHTML = '<div class="search-no-results">// No results for "' + q + '"</div>';
+    results.innerHTML = '<div class="search-no-results">No results for "' + q + '"</div>';
     return;
   }
   results.innerHTML = hits.map(function(item) {
@@ -541,7 +540,7 @@ var terminalBooted = false;
 var TERMINAL_COMMANDS = {
   help: function() {
     return [
-      { text: '// AVAILABLE COMMANDS:', cls: 'line-cyan' },
+      { text: ' AVAILABLE COMMANDS:', cls: 'line-cyan' },
       { text: '  help        — show this message' },
       { text: '  whoami      — identity check' },
       { text: '  ls          — list files' },
@@ -572,7 +571,7 @@ var TERMINAL_COMMANDS = {
   },
   'cat secrets': function() {
     return [
-      { text: '// DECRYPTING secrets.dat...', cls: 'line-dim' },
+      { text: 'DECRYPTING secrets.dat...', cls: 'line-dim' },
       { text: '' },
       { text: '[SECRET_01] This wiki was built from scratch in raw HTML/CSS/JS.', cls: 'line-gold' },
       { text: '[SECRET_02] The FSP logo is the crest of a fictional space federation.' },
@@ -582,7 +581,7 @@ var TERMINAL_COMMANDS = {
   },
   skills: function() {
     return [
-      { text: '// SKILL_MATRIX.DAT', cls: 'line-cyan' },
+      { text: 'SKILL_MATRIX.DAT', cls: 'line-cyan' },
     ].concat(SKILLS.map(function(s) {
       var bar = '[' + '█'.repeat(Math.round(s.level / 10)) + '░'.repeat(10 - Math.round(s.level / 10)) + ']';
       return { text: '  ' + (s.name + '          ').slice(0,18) + bar + ' ' + s.level + '%' };
@@ -590,17 +589,17 @@ var TERMINAL_COMMANDS = {
   },
   matrix: function() {
     return [
-      { text: '// INITIATING MATRIX PROTOCOL...', cls: 'line-green' },
+      { text: 'INITIATING MATRIX PROTOCOL...', cls: 'line-green' },
       { text: '01001000 01100101 01101100 01101100 01101111', cls: 'line-dim' },
       { text: '00101100 00100000 01001110 01100101 01101111', cls: 'line-dim' },
-      { text: '// Translation: "Hello, Neo"', cls: 'line-cyan' },
-      { text: '// There is no spoon.', cls: 'line-gold' },
+      { text: 'Translation: "Hello, Neo"', cls: 'line-cyan' },
+      { text: 'There is no spoon.', cls: 'line-gold' },
     ];
   },
   clear: function() { return null; /* special */ },
   exit: function() {
     setTimeout(function() { navigate('home'); }, 300);
-    return [{ text: '// Returning to home...', cls: 'line-dim' }];
+    return [{ text: 'Returning to home...', cls: 'line-dim' }];
   }
 };
 
@@ -610,10 +609,10 @@ function initSecretTerminal() {
   var out = document.getElementById('secretOutput');
   if (!out) return;
   var bootLines = [
-    { text: '// VONNIE_TERMINAL v1.0 — KONAMI ACCESS GRANTED', cls: 'line-cyan', delay: 0 },
-    { text: '// Initializing secure shell...', cls: 'line-dim', delay: 200 },
-    { text: '// Connection established. Welcome, operator.', cls: '', delay: 400 },
-    { text: '// Type "help" to see available commands.', cls: 'line-gold', delay: 600 },
+    { text: 'VONNIE_TERMINAL v1.0 — KONAMI ACCESS GRANTED', cls: 'line-cyan', delay: 0 },
+    { text: 'Initializing secure shell...', cls: 'line-dim', delay: 200 },
+    { text: 'Connection established. Welcome, operator.', cls: '', delay: 400 },
+    { text: 'Type "help" to see available commands.', cls: 'line-gold', delay: 600 },
     { text: '', delay: 700 },
   ];
   bootLines.forEach(function(l) {
