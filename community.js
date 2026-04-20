@@ -592,33 +592,56 @@ function renderActivityGraph(msgDates, streakDays, lastSeenAt) {
 async function updateLastSeen() {
   if (!currentUser) return;
   try {
-    // Calculate streak
-    const today = new Date().toISOString().slice(0,10);
-    const prof = currentProfile;
-    const lastSeen = prof?.last_seen_at?.slice(0,10);
-    let streak = prof?.streak_days || 0;
-
-    if (lastSeen) {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yStr = yesterday.toISOString().slice(0,10);
-      if (lastSeen === today) {
-        // already updated today — keep streak
-      } else if (lastSeen === yStr) {
-        streak += 1; // consecutive day
-      } else {
-        streak = 1; // broke streak, restart
-      }
-    } else {
-      streak = 1;
+    // ── ใช้ local date ของ user (ตาม timezone เครื่องเขา) ─────
+    function toLocalDateStr(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
     }
 
+    const now       = new Date();
+    const todayStr  = toLocalDateStr(now);
+
+    // last_seen_at เก็บเป็น ISO (UTC) — แปลงกลับเป็น local ก่อนเปรียบเทียบ
+    const prof = currentProfile;
+    // ถ้ามี last_streak_date (local) ให้ใช้อันนั้น ถ้าไม่มีค่อย fallback เป็น last_seen_at แปลง local
+    const lastSeenLocal = prof?.last_streak_date
+      || (prof?.last_seen_at ? toLocalDateStr(new Date(prof.last_seen_at)) : null);
+
+    let streak = prof?.streak_days || 0;
+
+    if (!lastSeenLocal) {
+      // login ครั้งแรก
+      streak = 1;
+    } else if (lastSeenLocal === todayStr) {
+      // login วันเดิมซ้ำ — ไม่ต้องทำอะไร streak คงเดิม
+    } else {
+      const yesterday = new Date(now);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yStr = toLocalDateStr(yesterday);
+
+      if (lastSeenLocal === yStr) {
+        streak += 1; // วันติดกัน
+      } else {
+        streak = 1;  // ขาดไป → เริ่มใหม่
+      }
+    }
+
+    // เก็บ last_streak_date เป็น local date string
+    // เพื่อให้การเปรียบเทียบครั้งหน้าถูกต้อง
     await supabase.from('profiles').update({
-      last_seen_at: new Date().toISOString(),
-      streak_days:  streak,
+      last_seen_at:      now.toISOString(),
+      streak_days:       streak,
+      last_streak_date:  todayStr, // local date — ใช้เปรียบเทียบ streak
     }).eq('id', currentUser.id);
 
-    currentProfile = { ...currentProfile, last_seen_at: new Date().toISOString(), streak_days: streak };
+    currentProfile = {
+      ...currentProfile,
+      last_seen_at:     now.toISOString(),
+      streak_days:      streak,
+      last_streak_date: todayStr,
+    };
   } catch(e) {}
 }
 
