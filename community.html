@@ -155,7 +155,9 @@
         <i class="fa-solid fa-camera" style="font-size:13px;"></i>
         <span>📸 This channel is for images only — attach an image to post</span>
       </div>
-      <div class="comm-input-bar">
+      <!-- MENTION DROPDOWN -->
+      <div class="mention-dropdown" id="mentionDropdown"></div>
+      <div class="comm-input-bar" style="position:relative;">
         <button class="comm-img-btn" onclick="document.getElementById('imgFileInput').click()" title="Attach image"><i class="fa-solid fa-image"></i></button>
         <input type="file" id="imgFileInput" accept="image/*" style="display:none" onchange="handleImageSelect(event)">
         <div class="comm-input-wrap">
