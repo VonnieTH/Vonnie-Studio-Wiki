@@ -155,9 +155,7 @@
         <i class="fa-solid fa-camera" style="font-size:13px;"></i>
         <span>📸 This channel is for images only — attach an image to post</span>
       </div>
-      <!-- MENTION DROPDOWN -->
-      <div class="mention-dropdown" id="mentionDropdown"></div>
-      <div class="comm-input-bar" style="position:relative;">
+      <div class="comm-input-bar">
         <button class="comm-img-btn" onclick="document.getElementById('imgFileInput').click()" title="Attach image"><i class="fa-solid fa-image"></i></button>
         <input type="file" id="imgFileInput" accept="image/*" style="display:none" onchange="handleImageSelect(event)">
         <div class="comm-input-wrap">
@@ -165,6 +163,7 @@
             <button class="fmt-btn" onclick="insertFmt('**','**')" title="Bold"><b>B</b></button>
             <button class="fmt-btn" onclick="insertFmt('*','*')" title="Italic"><i>I</i></button>
             <button class="emoji-toggle-btn" onclick="toggleEmojiPicker(event)" title="Emoji">😊</button>
+            <button class="fmt-btn" onclick="openPollModal()" title="Create Poll" style="font-size:12px;">📊</button>
             <span class="fmt-hint">**bold** *italic* · Shift+Enter=newline</span>
           </div>
           <textarea class="comm-input" id="commInput" placeholder="Type a message..." autocomplete="off" maxlength="500" rows="1"
@@ -274,6 +273,48 @@
   </div>
 </div>
 
+
+
+<!-- POLL CREATE MODAL -->
+<div class="poll-overlay" id="pollModal" onclick="if(event.target===this)closePollModal()">
+  <div class="poll-box">
+    <div class="poll-header">
+      <span>📊 CREATE POLL</span>
+      <button class="poll-close" onclick="closePollModal()">[ X ]</button>
+    </div>
+    <div class="poll-body">
+      <div>
+        <div class="poll-label">QUESTION</div>
+        <input class="poll-question-input" id="pollQuestion" placeholder="What do you want to ask?" maxlength="120">
+      </div>
+      <div>
+        <div class="poll-label">OPTIONS (min 2, max 6)</div>
+        <div class="poll-options-list" id="pollOptionsList">
+          <div class="poll-option-row">
+            <input class="poll-option-input" placeholder="Option 1" maxlength="60">
+          </div>
+          <div class="poll-option-row">
+            <input class="poll-option-input" placeholder="Option 2" maxlength="60">
+          </div>
+        </div>
+        <button class="poll-add-btn" onclick="addPollOption()">+ Add option</button>
+      </div>
+      <div>
+        <div class="poll-label">DURATION</div>
+        <div class="poll-duration-row" id="pollDurationRow">
+          <button class="poll-dur-btn" data-hours="1" onclick="selectPollDuration(this)">1h</button>
+          <button class="poll-dur-btn active" data-hours="24" onclick="selectPollDuration(this)">24h</button>
+          <button class="poll-dur-btn" data-hours="72" onclick="selectPollDuration(this)">3d</button>
+          <button class="poll-dur-btn" data-hours="168" onclick="selectPollDuration(this)">7d</button>
+          <button class="poll-dur-btn" data-hours="0" onclick="selectPollDuration(this)">No limit</button>
+        </div>
+      </div>
+      <div class="poll-footer">
+        <button class="poll-submit-btn" id="pollSubmitBtn" onclick="submitPoll()">[ CREATE POLL ]</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
   <button class="lightbox-close" onclick="closeLightbox()">[ ✕ CLOSE ]</button>
