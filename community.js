@@ -537,6 +537,91 @@ window.resetGlobalBrain = async function() {
   renderBrainPanel();
 };
 
+
+// ============================================================
+//  📊 ACTIVITY GRAPH + STREAK
+// ============================================================
+function renderActivityGraph(msgDates, streakDays, lastSeenAt) {
+  // Build day count map { 'YYYY-MM-DD': count }
+  const countMap = {};
+  msgDates.forEach(d => { countMap[d] = (countMap[d] || 0) + 1; });
+
+  // Generate last 52 weeks (364 days) + today = 365 cells
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const days = [];
+  for (let i = 364; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    days.push(d.toISOString().slice(0,10));
+  }
+
+  // Max count for scaling
+  const maxCount = Math.max(1, ...Object.values(countMap));
+
+  const graph = document.getElementById('pviewGraph');
+  if (!graph) return;
+  graph.innerHTML = '';
+
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  days.forEach(dateStr => {
+    const count = countMap[dateStr] || 0;
+    const level = count === 0 ? 0
+      : count <= Math.ceil(maxCount*0.25) ? 1
+      : count <= Math.ceil(maxCount*0.5)  ? 2
+      : count <= Math.ceil(maxCount*0.75) ? 3 : 4;
+
+    const sq = document.createElement('div');
+    sq.className = 'pview-graph-sq';
+    sq.setAttribute('data-level', level);
+    const [y,m,day] = dateStr.split('-');
+    sq.title = `${day} ${MONTHS[parseInt(m)-1]} ${y}: ${count} message${count!==1?'s':''}`;
+    graph.appendChild(sq);
+  });
+
+  // Streak display
+  const streakEl  = document.getElementById('pviewStreakNum');
+  const lastEl    = document.getElementById('pviewStreakLast');
+  if (streakEl) streakEl.textContent = streakDays || '0';
+  if (lastEl && lastSeenAt) {
+    const d = new Date(lastSeenAt);
+    lastEl.textContent = `Last active: ${d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}`;
+  }
+}
+
+async function updateLastSeen() {
+  if (!currentUser) return;
+  try {
+    // Calculate streak
+    const today = new Date().toISOString().slice(0,10);
+    const prof = currentProfile;
+    const lastSeen = prof?.last_seen_at?.slice(0,10);
+    let streak = prof?.streak_days || 0;
+
+    if (lastSeen) {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yStr = yesterday.toISOString().slice(0,10);
+      if (lastSeen === today) {
+        // already updated today — keep streak
+      } else if (lastSeen === yStr) {
+        streak += 1; // consecutive day
+      } else {
+        streak = 1; // broke streak, restart
+      }
+    } else {
+      streak = 1;
+    }
+
+    await supabase.from('profiles').update({
+      last_seen_at: new Date().toISOString(),
+      streak_days:  streak,
+    }).eq('id', currentUser.id);
+
+    currentProfile = { ...currentProfile, last_seen_at: new Date().toISOString(), streak_days: streak };
+  } catch(e) {}
+}
+
 // ============================================================
 //  INIT
 // ============================================================
@@ -569,6 +654,7 @@ async function showCommunity() {
   initPresence();
   initNotifications();
   checkMuted();
+  updateLastSeen(); // track last active + streak
 }
 
 // ============================================================
@@ -1451,7 +1537,7 @@ window.viewProfile=async function(userId){
   // Fetch profile + badges + message stats in parallel
   const [{data:prof},statsResult]=await Promise.all([
     supabase.from('profiles').select('*').eq('id',userId).single(),
-    supabase.from('messages').select('id,image_url').eq('user_id',userId),
+    supabase.from('messages').select('id,image_url,created_at,room_id').eq('user_id',userId).order('created_at',{ascending:false}).limit(365),
   ]);
   if(!prof) return;
 
@@ -1498,7 +1584,24 @@ window.viewProfile=async function(userId){
   document.getElementById('pviewLevelFill').style.boxShadow=`0 0 8px ${color}`;
   document.getElementById('pviewLevelSub').textContent=lv.isMax?'Maximum level reached!':`// ${lv.pct}% to LV.${lv.level+1}`;
   // Meta
-  document.getElementById('pviewMeta').innerHTML=`<span><i class="fa-regular fa-calendar"></i> Joined ${joinDate}</span>`;
+  // Meta + last seen
+  const lastSeenStr = prof.last_seen_at
+    ? (() => {
+        const d = new Date(prof.last_seen_at);
+        const diff = Math.floor((Date.now() - d) / 60000);
+        if (diff < 2)   return 'Online now';
+        if (diff < 60)  return `${diff}m ago`;
+        if (diff < 1440) return `${Math.floor(diff/60)}h ago`;
+        return `${Math.floor(diff/1440)}d ago`;
+      })()
+    : '—';
+  document.getElementById('pviewMeta').innerHTML=
+    `<span><i class="fa-regular fa-calendar"></i> Joined ${joinDate}</span>` +
+    `<span><i class="fa-regular fa-clock"></i> Last seen: ${lastSeenStr}</span>`;
+
+  // Activity graph + streak
+  const msgDates = (statsResult.data || []).map(m => m.created_at?.slice(0,10)).filter(Boolean);
+  renderActivityGraph(msgDates, prof.streak_days || 0, prof.last_seen_at);
   // Badges
   const badgesEl=document.getElementById('pviewBadges');
   badgesEl.innerHTML='';
