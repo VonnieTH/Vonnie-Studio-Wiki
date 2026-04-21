@@ -26,11 +26,7 @@
 .auth-error.show{display:block;}
 .auth-success{font-family:var(--mono);font-size:10px;color:var(--green);background:rgba(64,255,128,.06);border:1px solid rgba(64,255,128,.3);padding:8px 12px;display:none;text-align:center;}
 .auth-success.show{display:block;}
-.auth-forgot-link{
-  background:none;border:none;font-family:var(--mono);font-size:9px;
-  color:var(--text-dim);cursor:pointer;letter-spacing:.08em;
-  padding:4px 0;text-align:center;width:100%;transition:color .15s;
-}
+.auth-forgot-link{background:none;border:none;font-family:var(--mono);font-size:9px;color:var(--text-dim);cursor:pointer;letter-spacing:.08em;padding:4px 0;text-align:center;width:100%;transition:color .15s;}
 .auth-forgot-link:hover{color:var(--cyan);}
 .auth-privacy{font-family:var(--mono);font-size:9px;color:var(--text-dim);text-align:center;margin-top:8px;line-height:1.6;}
 .auth-back{font-family:var(--mono);font-size:10px;color:var(--text-dim);text-decoration:none;display:inline-flex;align-items:center;gap:6px;margin-bottom:16px;transition:color .15s;}

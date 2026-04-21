@@ -991,6 +991,8 @@ window.switchTab = function(tab) {
   if (resetEl) resetEl.style.display = tab==='reset' ? '' : 'none';
   document.getElementById('tabLogin').classList.toggle('active',    tab==='login');
   document.getElementById('tabRegister').classList.toggle('active', tab==='register');
+  const resendRow = document.getElementById('resendVerifyRow');
+  if (resendRow) resendRow.style.display = 'none';
   clearAuthMessages();
 };
 function clearAuthMessages(){['authError','authSuccess'].forEach(id=>{const e=document.getElementById(id);e.classList.remove('show');e.textContent='';})}
@@ -1000,6 +1002,22 @@ function showSuccess(msg){const e=document.getElementById('authSuccess');e.textC
 // ============================================================
 //  AUTH
 // ============================================================
+
+window.resendVerification = async function() {
+  const email = document.getElementById('resendEmail').value.trim();
+  const btn   = document.getElementById('resendVerifyBtn');
+  if (!email) return;
+  btn.disabled = true; btn.textContent = 'Sending...';
+  const { error } = await supabase.auth.resend({ type: 'signup', email });
+  if (error) {
+    showError('Could not resend: ' + error.message);
+  } else {
+    showSuccess('✓ Verification email resent! Check your inbox.');
+    const row = document.getElementById('resendVerifyRow');
+    if (row) row.style.display = 'none';
+  }
+  btn.disabled = false; btn.textContent = 'Resend verification email';
+};
 
 window.handleResetPassword = async function() {
   clearAuthMessages();
@@ -1027,7 +1045,21 @@ window.handleLogin = async function() {
   if(!email||!password) return showError('Complete information');
   btn.disabled=true; btn.textContent='[ CONNECTING... ]';
   const {data,error}=await signIn(email,password);
-  if(error){showError(error.message==='Invalid login credentials'?'Email or Password incorrect':error.message);btn.disabled=false;btn.textContent='[ LOGIN → ]';return;}
+  if(error){
+    if (error.message === 'Invalid login credentials') {
+      showError('Email or password incorrect');
+    } else if (error.message === 'Email not confirmed') {
+      showError('Email not verified yet. Check your inbox (and spam folder).');
+      const row = document.getElementById('resendVerifyRow');
+      const inp = document.getElementById('resendEmail');
+      if (row) row.style.display = 'flex';
+      if (inp) inp.value = email;
+    } else {
+      showError(error.message);
+    }
+    btn.disabled=false; btn.textContent='[ LOGIN → ]';
+    return;
+  }
   currentUser=data.user;
   const {data:profile}=await getProfile(currentUser.id);
   currentProfile=profile;
