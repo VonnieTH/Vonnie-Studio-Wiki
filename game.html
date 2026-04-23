@@ -213,7 +213,7 @@
       <div class="fle-row">
         <div class="fle-col">
           <div class="fle-label">NATION FLAG</div>
-          <input type="file" id="fleFlag" accept="image/*" style="display:none" onchange="document.getElementById('fleFlagPrev').src=URL.createObjectURL(this.files[0]);document.getElementById('fleFlagPrev').style.display='block'">
+          <input type="file" id="fleFlag" accept="image/*" style="display:none" onchange="previewFile(this,'fleFlagPrev')">
           <div class="fupzone" style="--c:#00d4ff" onclick="document.getElementById('fleFlag').click()">Click to upload flag</div>
           <img id="fleFlagPrev" class="fle-preview" src="" alt="">
           <div class="fle-label" style="margin-top:8px">CURRENT FLAG</div>
@@ -221,7 +221,7 @@
         </div>
         <div class="fle-col">
           <div class="fle-label">LEADER PORTRAIT</div>
-          <input type="file" id="fleLeader" accept="image/*" style="display:none" onchange="document.getElementById('fleLeaderPrev').src=URL.createObjectURL(this.files[0]);document.getElementById('fleLeaderPrev').style.display='block'">
+          <input type="file" id="fleLeader" accept="image/*" style="display:none" onchange="previewFile(this,'fleLeaderPrev')">
           <div class="fupzone" style="--c:#f0c040" onclick="document.getElementById('fleLeader').click()">Click to upload portrait</div>
           <img id="fleLeaderPrev" class="fle-preview-r" src="" alt="">
           <div class="fle-label" style="margin-top:8px">CURRENT LEADER</div>

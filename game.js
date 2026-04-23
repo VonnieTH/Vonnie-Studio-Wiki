@@ -24,8 +24,7 @@ const mapImg=document.getElementById('mi');
 const ma=document.getElementById('ma');
 let zoom=1,panX=0,panY=0;
 let dragging=false,lastX=0,lastY=0;
-let dragStartX=0,dragStartY=0,dragMoved=false,dragStartPanX=0,dragStartPanY=0;
-let dragClickPending=false,dragClickX=0,dragClickY=0;
+let dragMoved=false,dragStartX=0,dragStartY=0,dragPanX=0,dragPanY=0,pendClick=null;
 let pinchDist=0;
 
 function mapH(){return ma.clientHeight-32;}
@@ -42,15 +41,14 @@ function resize(){
 }
 
 function clampPan(){
-  // Compute min zoom so map always fills the viewport
   const mw=mapW(),mh=mapH();
-  const minZoom=Math.max(mw/MAP_W*1,mh/MAP_H*1);
+  const minZoom=Math.max(mw/MAP_W,mh/MAP_H);
   if(zoom<minZoom){zoom=minZoom;}
-  const sw=mw*zoom, sh=mh*zoom;
-  // X: infinite wrap (cylindrical world)
-  const imgW=sw; // width of one map tile at current zoom+dpr
-  panX=((panX%imgW)+imgW)%imgW; // always positive [0, imgW)
-  // Y: clamped
+  const imgW=mw*zoom;
+  // X: wrap infinitely like a globe
+  panX=((panX%imgW)+imgW)%imgW;
+  // Y: clamp (no vertical wrap)
+  const sh=mh*zoom;
   panY=Math.min(0,Math.max(mh-sh, panY));
 }
 
@@ -64,15 +62,14 @@ function zoomAt(cx,cy,factor){
   draw();
 }
 window.zoomBy=function(f){zoomAt(mapW()/2,mapH()/2,f);};
-window.resetZoom=function(){zoom=1;panX=0;panY=0;clampPan();draw();};
+window.resetZoom=function(){zoom=1;panX=0;panY=0;draw();};
 
 function screenToMap(sx,sy){
-  const mw=mapW();
-  const imgW=mw*zoom;
-  // account for wrap: find which tile copy the cursor is in
+  const mw=mapW(),imgW=mw*zoom;
   const rawX=sx-panX;
-  const wrappedX=((rawX%imgW)+imgW)%imgW;
-  return {x:wrappedX/zoom*(MAP_W/mapW()),y:(sy-panY)/zoom*(MAP_H/mapH())};
+  // wrap into [0,imgW) range
+  const wx=((rawX%imgW)+imgW)%imgW;
+  return {x:wx/zoom*(MAP_W/mw), y:(sy-panY)/zoom*(MAP_H/mapH())};
 }
 
 // Wheel zoom
@@ -85,33 +82,28 @@ ma.addEventListener('wheel',e=>{
 // Mouse drag
 canvas.addEventListener('mousedown',e=>{
   if(e.button===1||e.button===2){dragging=true;lastX=e.clientX;lastY=e.clientY;canvas.classList.add('grabbing');return;}
-  // Also start drag on left button if moved more than threshold (handled in mousemove)
-  if(e.button===0){dragStartX=e.clientX;dragStartY=e.clientY;dragMoved=false;dragStartPanX=panX;dragStartPanY=panY;}
-  // click handled on mouseup to avoid drag-then-click
-  dragClickPending=true;
-  dragClickX=e.clientX;dragClickY=e.clientY;
+  if(e.button===0){dragMoved=false;dragStartX=e.clientX;dragStartY=e.clientY;dragPanX=panX;dragPanY=panY;}
 });
 window.addEventListener('mousemove',e=>{
   if(dragging){panX+=e.clientX-lastX;panY+=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;clampPan();draw();return;}
-  // Left-drag detection
-  if(dragStartX!==undefined && e.buttons===1){
+  if(e.buttons===1){
     const dx=e.clientX-dragStartX,dy=e.clientY-dragStartY;
-    if(!dragMoved&&(Math.abs(dx)+Math.abs(dy)>6)){dragMoved=true;canvas.classList.add('grabbing');}
-    if(dragMoved){panX=dragStartPanX+dx;panY=dragStartPanY+dy;clampPan();draw();return;}
+    if(!dragMoved&&Math.abs(dx)+Math.abs(dy)>5){dragMoved=true;canvas.classList.add('grabbing');}
+    if(dragMoved){panX=dragPanX+dx;panY=dragPanY+dy;clampPan();draw();return;}
   }
   const r=canvas.getBoundingClientRect();
   const mp=screenToMap(e.clientX-r.left,e.clientY-r.top);
   showTip(e.clientX,e.clientY,mp.x,mp.y);
 });
 window.addEventListener('mouseup',e=>{
-  if(e.button===1||e.button===2){dragging=false;canvas.classList.remove('grabbing');}
+  if(e.button===1||e.button===2){dragging=false;canvas.classList.remove('grabbing');return;}
   if(e.button===0){
-    if(!dragMoved && dragClickPending){
-      const r=canvas.getBoundingClientRect();
-      handleClick(dragClickX-r.left,dragClickY-r.top);
-    }
     canvas.classList.remove('grabbing');
-    dragMoved=false;dragStartX=undefined;dragClickPending=false;
+    if(!dragMoved){
+      const r=canvas.getBoundingClientRect();
+      handleClick(dragStartX-r.left,dragStartY-r.top);
+    }
+    dragMoved=false;
   }
 });
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
@@ -206,68 +198,65 @@ function showTip(cx,cy,mx,my){
 function hexRgb(h){return[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];}
 
 function draw(){
-  const W=canvas.width,H=canvas.height;
-  const dpr=devicePixelRatio;
+  const W=canvas.width,H=canvas.height,dpr=devicePixelRatio;
   ctx.clearRect(0,0,W,H);
   if(!mapImg.complete||!mapImg.naturalWidth)return;
 
   const mw=mapW(),mh=mapH();
-  const sw=mw*zoom*dpr,sh=mh*zoom*dpr;
+  const sw=mw*zoom*dpr, sh=mh*zoom*dpr;
+  const imgW=sw; // one map tile width in canvas px
   const dy=panY*dpr;
 
-  // ── Infinite horizontal tiling ──────────────────────────────────────────
-  const imgW=sw;
-  const startTile=Math.floor(-panX*dpr/imgW)-1;
-  const endTile=Math.ceil((W-panX*dpr)/imgW)+1;
+  // Tile range to cover canvas (infinite horizontal)
+  const startT=Math.floor(-panX*dpr/imgW)-1;
+  const endT  =Math.ceil((W-panX*dpr)/imgW)+1;
 
-  for(let t=startTile;t<=endTile;t++){
-    const dx=panX*dpr+t*imgW;
-    ctx.drawImage(mapImg,dx,dy,sw,sh);
+  // Draw map tiles
+  for(let t=startT;t<=endT;t++){
+    ctx.drawImage(mapImg, panX*dpr+t*imgW, dy, sw, sh);
   }
 
-  const cellW=sw/100,cellH=sh/60;
+  const cellW=sw/100, cellH=sh/60;
 
-  // Draw province overlays across all visible tile copies
-  for(let t=startTile;t<=endTile;t++){
-    const tileOffX=panX*dpr+t*imgW;
+  // Province overlays — repeated per tile
+  for(let t=startT;t<=endT;t++){
+    const ox=panX*dpr+t*imgW;
     for(const [key,pid] of Object.entries(LOOKUP)){
       if(!pid)continue;
       const[col,row]=key.split(',').map(Number);
+      const x=ox+col*cellW, y=dy+row*cellH;
+      if(x+cellW<0||x>W) continue;
       const oid=ownership[pid];
-      const x=tileOffX+col*cellW,y=dy+row*cellH;
-      if(x+cellW<0||x>W)continue;
-
       let fill=null;
       if(selProv&&pid===selProv.id){
         fill='rgba(0,212,255,.4)';
         ctx.strokeStyle='rgba(0,212,255,.95)';ctx.lineWidth=1;
-        ctx.strokeRect(x+0.5,y+0.5,cellW-1,cellH-1);
-      }else if(mn&&oid===mn.id){
+        ctx.strokeRect(x+.5,y+.5,cellW-1,cellH-1);
+      } else if(mn&&oid===mn.id){
         const c=natColors[mn.id]||[240,192,64];
-        fill='rgba('+c[0]+','+c[1]+','+c[2]+',.28)';
-      }else if(oid){
+        fill=`rgba(${c[0]},${c[1]},${c[2]},.28)`;
+      } else if(oid){
         const c=natColors[oid]||[200,100,100];
-        fill='rgba('+c[0]+','+c[1]+','+c[2]+',.28)';
+        fill=`rgba(${c[0]},${c[1]},${c[2]},.28)`;
       }
       if(!fill)continue;
       ctx.fillStyle=fill;
-      ctx.fillRect(x,y,cellW+0.5,cellH+0.5);
+      ctx.fillRect(x,y,cellW+.5,cellH+.5);
     }
   }
 
-  // Labels only at zoom >= 1.5
+  // Province name labels at high zoom
   if(zoom>=1.5){
-    const fsize=Math.max(8,Math.min(13,cellW*2.2));
-    ctx.textAlign='center';ctx.font='bold '+fsize+'px monospace';
-    for(let t=startTile;t<=endTile;t++){
-      const tileOffX=panX*dpr+t*imgW;
+    const fs=Math.max(8,Math.min(13,cellW*2.2));
+    ctx.textAlign='center'; ctx.font=`bold ${fs}px monospace`;
+    for(let t=startT;t<=endT;t++){
+      const ox=panX*dpr+t*imgW;
       PROVINCES.forEach(p=>{
-        const oid=ownership[p.id];
-        if(!oid)return;
-        const sx=tileOffX+(p.x/MAP_W)*sw,sy=dy+(p.y/MAP_H)*sh;
-        if(sx<-fsize*6||sx>W+fsize*6||sy<0||sy>H)return;
-        const isOwn=mn&&oid===mn.id;
-        ctx.shadowColor='rgba(0,0,0,.8)';ctx.shadowBlur=3;
+        if(!ownership[p.id])return;
+        const sx=ox+(p.x/MAP_W)*sw, sy=dy+(p.y/MAP_H)*sh;
+        if(sx<-fs*6||sx>W+fs*6||sy<0||sy>H)return;
+        const isOwn=mn&&ownership[p.id]===mn.id;
+        ctx.shadowColor='rgba(0,0,0,.85)'; ctx.shadowBlur=3;
         ctx.fillStyle=isOwn?'rgba(240,192,64,.98)':'rgba(255,255,255,.85)';
         ctx.fillText(p.name.slice(0,10),sx,sy);
         ctx.shadowBlur=0;
@@ -275,15 +264,15 @@ function draw(){
     }
   }
 
-  // Selected dot on all tile copies
+  // Selected province dot
   if(selProv){
-    for(let t=startTile;t<=endTile;t++){
-      const tileOffX=panX*dpr+t*imgW;
-      const sx=tileOffX+(selProv.x/MAP_W)*sw,sy=dy+(selProv.y/MAP_H)*sh;
+    for(let t=startT;t<=endT;t++){
+      const ox=panX*dpr+t*imgW;
+      const sx=ox+(selProv.x/MAP_W)*sw, sy=dy+(selProv.y/MAP_H)*sh;
       if(sx<-20||sx>W+20)continue;
-      ctx.beginPath();ctx.arc(sx,sy,5*dpr,0,Math.PI*2);
-      ctx.fillStyle='#00d4ff';ctx.fill();
-      ctx.strokeStyle='#fff';ctx.lineWidth=1.5*dpr;ctx.stroke();
+      ctx.beginPath(); ctx.arc(sx,sy,5*dpr,0,Math.PI*2);
+      ctx.fillStyle='#00d4ff'; ctx.fill();
+      ctx.strokeStyle='#fff'; ctx.lineWidth=1.5*dpr; ctx.stroke();
     }
   }
 }
@@ -353,14 +342,11 @@ async function afterLogin(){
   // Owner = admin flag from community profiles
   // Owner check: is_admin must be TRUE in profiles table
   // Run in Supabase SQL: UPDATE profiles SET is_admin=true WHERE id='YOUR_USER_ID';
-  // Owner check: is_admin must be TRUE in profiles table
-  // OR owner_ids list in wc_settings (fallback)
-  const isAdminFlag = cp?.is_admin===true;
-  if(isAdminFlag){
+  if(cp?.is_admin===true){
     isOwner=true;
     document.getElementById('ownerBadge').style.display='';
     document.getElementById('ownerBtn').style.display='';
-    console.info('[WC] Owner mode active (is_admin flag)');
+    console.info('[WC] Owner mode active');
   }
   await loadWorld();
   subscribeRealtime();
@@ -525,35 +511,42 @@ function checkMyNation(){
 window.openSetup=function(){if(!cu){toast('Login first');return;}document.getElementById('setup').style.display='flex';};
 
 // ── FLAG / LEADER HELPERS ───────────────────────────────────
-window.prevFlag=function(e){const f=e.target.files[0];if(!f)return;const img=document.getElementById('sFlagPrev');img.src=URL.createObjectURL(f);img.style.display='block';};
-window.prevLead=function(e){const f=e.target.files[0];if(!f)return;const img=document.getElementById('sLeadPrev');img.src=URL.createObjectURL(f);img.style.display='block';};
+window.prevFlag=function(e){previewFile(e.target,'sFlagPrev');};
+window.prevLead=function(e){previewFile(e.target,'sLeadPrev');};
+
+// Preview file before upload (replaces inline URL.createObjectURL)
+window.previewFile=function(input,imgId){
+  const f=input.files[0]; if(!f)return;
+  const img=document.getElementById(imgId);
+  const reader=new FileReader();
+  reader.onload=e=>{img.src=e.target.result;img.style.display='block';};
+  reader.readAsDataURL(f);
+};
+
+function fileToDataUrl(file){
+  return new Promise(resolve=>{
+    const r=new FileReader();
+    r.onload=e=>resolve(e.target.result);
+    r.onerror=()=>resolve(null);
+    r.readAsDataURL(file);
+  });
+}
 
 async function uploadAsset(file,path){
   if(!file)return null;
+  // First try Supabase Storage
   try{
-    // Try to upload; if bucket not found, fall back to base64 data URL
-    const{data:upData,error}=await sb.storage.from('game-assets').upload(path,file,{upsert:true,contentType:file.type});
-    if(error){
-      console.warn('Storage upload error:',error.message);
-      // Fallback: encode as base64 data URL (stored in DB column directly)
-      return await fileToDataUrl(file);
+    const{data:up,error}=await sb.storage.from('game-assets').upload(path,file,{upsert:true,contentType:file.type});
+    if(!error){
+      const{data}=sb.storage.from('game-assets').getPublicUrl(path);
+      return data.publicUrl+'?v='+Date.now();
     }
-    const{data}=sb.storage.from('game-assets').getPublicUrl(path);
-    return data.publicUrl+'?v='+Date.now();
+    console.warn('Storage error:',error.message,'→ using base64 fallback');
   }catch(e){
-    console.warn('Upload exception:',e.message);
-    return await fileToDataUrl(file);
+    console.warn('Storage exception:',e.message,'→ using base64 fallback');
   }
-}
-
-// Convert file to base64 data URL as fallback when storage bucket unavailable
-function fileToDataUrl(file){
-  return new Promise(resolve=>{
-    const reader=new FileReader();
-    reader.onload=e=>resolve(e.target.result);
-    reader.onerror=()=>resolve(null);
-    reader.readAsDataURL(file);
-  });
+  // Fallback: store as base64 data URL directly in DB column
+  return await fileToDataUrl(file);
 }
 
 function updateFlagLeader(){
@@ -690,7 +683,15 @@ function showPanel(p){
   const oid=ownership[p.id],owner=oid?nations[oid]:null;
   const isOwn=mn&&oid===mn.id,isCap=mn&&mn.capital_id===p.id;
   document.getElementById('rpH').textContent=(isCap?'★ ':'')+p.name.toUpperCase();
-  let html=[row('TERRAIN',p.terrain),row('OWNER',owner?owner.name:'Unclaimed',owner?(isOwn?'gd':'rd'):'cy'),'<div class="rdiv"></div>','<div class="rsec">YIELD / TICK</div>',row('Gold','+'+p.gold,'gd'),row('Manpower','+'+p.manpower,''),row('Supplies','+'+p.supply,''),'<div class="rdiv"></div>','<div class="rsec">ACTIONS</div>'].join('');
+  // Nation info row (flag + gov) for owner
+  let nationRow='';
+  if(owner){
+    const flagHtml=owner.flag_url?`<img src="${owner.flag_url}" style="height:16px;border:1px solid rgba(255,255,255,.2);margin-right:5px;vertical-align:middle">`:''
+    const govColor=(GOVS[owner.gov]?.color)||'#aaa';
+    nationRow=`<div class="irow" style="align-items:center">${flagHtml}<span class="ik">GOV</span><span class="iv" style="color:${govColor}">${owner.gov||'—'}</span></div>`;
+    if(owner.ruler) nationRow+=row('RULER',owner.ruler,'');
+  }
+  let html=[row('TERRAIN',p.terrain),row('OWNER',owner?owner.name:'Unclaimed',owner?(isOwn?'gd':'rd'):'cy'),nationRow,'<div class="rdiv"></div>','<div class="rsec">YIELD / TICK</div>',row('Gold','+'+p.gold,'gd'),row('Manpower','+'+p.manpower,''),row('Supplies','+'+p.supply,''),'<div class="rdiv"></div>','<div class="rsec">ACTIONS</div>'].join('');
   let acts='';
   if(!cu){acts=btn('Login to interact','prim','document.getElementById("auth").style.display="flex"');}
   else if(isOwn){acts+=btn('⚒ Build (Phase 3)','prim','toast("Building system coming in Phase 3")');acts+=btn('⚔ Recruit (Phase 4)','prim','toast("Military system coming in Phase 4")');}
