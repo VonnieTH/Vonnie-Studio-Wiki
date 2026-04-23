@@ -40,8 +40,11 @@ function resize(){
 }
 
 function clampPan(){
-  const sw=mapW()*zoom, sh=mapH()*zoom;
+  // Compute min zoom so map always fills the viewport
   const mw=mapW(),mh=mapH();
+  const minZoom=Math.max(mw/MAP_W*1,mh/MAP_H*1); // fit to screen = minimum
+  if(zoom<minZoom){zoom=minZoom;}
+  const sw=mw*zoom, sh=mh*zoom;
   panX=Math.min(0,Math.max(mw-sw, panX));
   panY=Math.min(0,Math.max(mh-sh, panY));
 }
@@ -306,7 +309,14 @@ async function afterLogin(){
   document.getElementById('lP').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
   // Owner check
   // Owner = admin flag from community profiles
-  if(cp?.is_admin===true){isOwner=true;document.getElementById('ownerBadge').style.display='';document.getElementById('ownerBtn').style.display='';}
+  // Owner check: is_admin must be TRUE in profiles table
+  // Run in Supabase SQL: UPDATE profiles SET is_admin=true WHERE id='YOUR_USER_ID';
+  if(cp?.is_admin===true){
+    isOwner=true;
+    document.getElementById('ownerBadge').style.display='';
+    document.getElementById('ownerBtn').style.display='';
+    console.info('[WC] Owner mode active');
+  }
   await loadWorld();
   subscribeRealtime();
   checkMyNation();
@@ -447,9 +457,13 @@ function updateTickDisplay(){
 // ── NATION SETUP ───────────────────────────────────────────
 function checkMyNation(){
   const mine=Object.values(nations).find(n=>n.owner_id===cu?.id);
+  // Sidebar starts collapsed on desktop — opens when clicking own nation
+  if(window.innerWidth>768){
+    const sb=document.getElementById('sb');
+    if(!sb.classList.contains('pinned'))sb.classList.add('collapsed');
+  }
   if(mine){
     mn=mine;natColors[mine.id]=hexRgb(mine.color||'#f0c040');
-    // Apply any accumulated offline ticks immediately
     applyOfflineTick(mine).then(updated=>{
       mn={...mn,...updated};nations[mn.id]=mn;updateNatUI();
     });
@@ -481,13 +495,50 @@ async function uploadAsset(file,path){
 
 function updateFlagLeader(){
   if(!mn)return;
-  // Flag
+
+  // ── Flag banner ──────────────────────────────────────────
   const fw=document.getElementById('sbFlagWrap'),fi=document.getElementById('sbFlagImg');
   if(mn.flag_url){fi.src=mn.flag_url;fw.style.display='block';}else{fw.style.display='none';}
-  // Leader
-  const lr=document.getElementById('sbLeaderRow'),la=document.getElementById('sbLeaderAvatar'),ln=document.getElementById('sbLeaderName');
-  if(mn.ruler){ln.textContent=mn.ruler;lr.style.display='flex';}else{lr.style.display='none';}
-  if(mn.leader_url){la.innerHTML='<img src="'+mn.leader_url+'" alt="leader">';} else{la.textContent='👤';}
+
+  // ── HoI4-style leader card ───────────────────────────────
+  const lc=document.getElementById('leaderCard');
+  if(lc){lc.classList.add('show');}
+  const lcPort=document.getElementById('lcPortrait');
+  if(lcPort){
+    if(mn.leader_url){
+      lcPort.innerHTML='<img src="'+mn.leader_url+'" alt="leader">';
+    } else {
+      lcPort.textContent='👤';
+    }
+  }
+  const lcName=document.getElementById('lcName');
+  if(lcName) lcName.textContent=mn.ruler||mn.name;
+  const lcGov=document.getElementById('lcGov');
+  if(lcGov) lcGov.textContent=(mn.gov||'').toUpperCase();
+
+  // ── Party support bars ───────────────────────────────────
+  const ps=mn.party_support||{};
+  const psec=document.getElementById('partySection');
+  const pbars=document.getElementById('partyBars');
+  if(psec&&pbars&&Object.keys(ps).length){
+    psec.style.display='block';
+    // Sort by support desc, show top 5
+    const sorted=Object.entries(ps).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    pbars.innerHTML=sorted.map(([name,pct])=>{
+      const g=GOVS[name];
+      const col=g?g.color:'#888';
+      const isCur=name===mn.gov;
+      return '<div class="party-row">'
+        +'<div class="party-name"><span'+(isCur?' style="color:'+col+'"':'')+'>'+name+(isCur?' ★':'')+'</span>'
+        +'<span class="party-pct">'+pct+'%</span></div>'
+        +'<div class="party-track"><div class="party-fill" style="width:'+pct+'%;background:'+col+'"></div></div>'
+        +'</div>';
+    }).join('');
+  }
+
+  // ── Desktop sidebar toggle button visibility ─────────────
+  const stb=document.getElementById('sbToggleBtn');
+  if(stb&&window.innerWidth>768) stb.style.display='block';
 }
 
 window.onGC=function(){const g=document.getElementById('sG').value;document.getElementById('gB').textContent=(GOVS[g]?.bonus)||'';document.getElementById('gB').style.borderColor='rgba('+(hexRgb(GOVS[g]?.color||'#888').join(','))+', .3)';document.getElementById('gB').style.color=GOVS[g]?.color||'#f0c040';};
@@ -547,21 +598,7 @@ function updateNatUI(){
   document.getElementById('iSup').textContent='+'+inc.sup+'/hr';
   document.getElementById('noNat').style.display='none';
   document.getElementById('myPS').style.display='';
-  // Update legend color
-  const c=natColors[mn.id]||[240,192,64];
-  document.getElementById('ownLegSq').style.background='rgba('+c[0]+','+c[1]+','+c[2]+',.35)';
-  document.getElementById('ownLegSq').style.borderColor='rgba('+c[0]+','+c[1]+','+c[2]+',.7)';
-  document.getElementById('ownLegLbl').textContent=mn.name;
-  // Update world nations legend
-  const legEl=document.getElementById('natLeg');
-  if(legEl){
-    legEl.innerHTML=Object.values(nations).map(n=>{
-      const nc=natColors[n.id]||[200,100,100];
-      const isown=n.id===mn?.id;
-      return '<div class="lgr"><div class="lgsq" style="background:rgba('+nc[0]+','+nc[1]+','+nc[2]+',.35);border:1px solid rgba('+nc[0]+','+nc[1]+','+nc[2]+',.7)"></div>'
-        +'<span class="lgl"'+(isown?' style="color:#f0c040"':'')+'>'+n.name+(isown?' (you)':'')+'</span></div>';
-    }).join('');
-  }
+  // Legend removed — too many nations to display
   updateTickDisplay();
   updateFlagLeader();
   refreshSb();
@@ -598,8 +635,12 @@ function showPanel(p){
   else if(oid&&!isOwn&&mn){acts+=btn('⚔ Declare War (Phase 4)','dng','toast("War system coming in Phase 4")');acts+=btn('✉ Send Envoy (Phase 3)','prim','toast("Diplomacy coming in Phase 3")');}
   else if(!mn&&cu){acts+=btn('⚑ Found Nation Here','prim','openSetup()');}
   document.getElementById('rpB').innerHTML=html+acts;
-  // Open right panel on mobile
+  // Open right panel on mobile, left sidebar when clicking own territory
   if(window.innerWidth<=768){document.getElementById('rp').classList.add('open');}
+  if(window.innerWidth>768 && mn && ownership[p.id]===mn.id){
+    document.getElementById('sb').classList.remove('collapsed');
+    document.getElementById('sb').classList.add('pinned');
+  }
 }
 
 function row(k,v,c){return '<div class="irow"><span class="ik">'+k+'</span><span class="iv'+(c?' '+c:'')+'">'+v+'</span></div>';}
@@ -646,7 +687,7 @@ window.openGovModal=function(){
   }).join('');
   document.getElementById('govModal').classList.add('open');
 };
-function closeGovModal(){document.getElementById('govModal').classList.remove('open');};
+window.closeGovModal=function(){document.getElementById('govModal').classList.remove('open');};
 window.changeGov=async function(ng){
   if(!mn)return;
   if(!confirm(`Reform to "${ng}"?`))return;
@@ -664,6 +705,69 @@ window.civilWar=async function(tg){
   mn.gov=tg;mn.stability=ns;mn.manpower=nm;nations[mn.id]=mn;updateNatUI();closeGovModal();toast('⚔ Civil war — '+tg+' established');
 };
 
+
+// ── FLAG / LEADER CHANGE (with cooldown) ───────────────────
+const FLAG_COOLDOWN_MS = 24*60*60*1000; // 24 hours
+
+window.openFlagLeaderEditor=function(){
+  if(!mn){toast('No nation');return;}
+  document.getElementById('fleModal').classList.add('open');
+  // Check cooldown
+  const lastChange=mn.flag_changed_at ? new Date(mn.flag_changed_at).getTime() : 0;
+  const remaining=FLAG_COOLDOWN_MS-(Date.now()-lastChange);
+  const cdEl=document.getElementById('fleCooldown');
+  if(remaining>0 && !isOwner){
+    const hrs=Math.ceil(remaining/3600000);
+    cdEl.textContent='Cooldown: '+hrs+'h remaining';
+    cdEl.style.color='#ff6b6b';
+    document.getElementById('fleSubmit').disabled=true;
+  } else {
+    cdEl.textContent=isOwner?'(Owner — no cooldown)':'Ready to change';
+    cdEl.style.color='#40ff80';
+    document.getElementById('fleSubmit').disabled=false;
+  }
+  // Pre-fill ruler name
+  document.getElementById('fleRuler').value=mn.ruler||'';
+  // Show current flag/leader
+  const cf=document.getElementById('fleCurrentFlag'),cl=document.getElementById('fleCurrentLeader');
+  if(mn.flag_url){cf.src=mn.flag_url;cf.style.display='block';}else{cf.style.display='none';}
+  if(mn.leader_url){cl.src=mn.leader_url;cl.style.display='block';}else{cl.style.display='none';}
+};
+window.closeFleModal=function(){document.getElementById('fleModal').classList.remove('open');};
+
+window.fleSubmit=async function(){
+  if(!mn||!cu)return;
+  const lastChange=mn.flag_changed_at?new Date(mn.flag_changed_at).getTime():0;
+  if(!isOwner && Date.now()-lastChange<FLAG_COOLDOWN_MS){toast('Cooldown active — wait 24h');return;}
+  const btn=document.getElementById('fleSubmit');
+  btn.disabled=true;btn.textContent='[ UPLOADING... ]';
+
+  const flagFile=document.getElementById('fleFlag').files[0];
+  const leadFile=document.getElementById('fleLeader').files[0];
+  const newRuler=document.getElementById('fleRuler').value.trim();
+
+  let updates={ruler:newRuler||mn.ruler, flag_changed_at:new Date().toISOString()};
+
+  if(flagFile){
+    const fu=await uploadAsset(flagFile, cu.id+'/flag_'+Date.now()+'.'+flagFile.name.split('.').pop());
+    if(fu)updates.flag_url=fu;
+  }
+  if(leadFile){
+    const lu=await uploadAsset(leadFile, cu.id+'/lead_'+Date.now()+'.'+leadFile.name.split('.').pop());
+    if(lu)updates.leader_url=lu;
+  }
+
+  const{error}=await sb.from('wc_nations').update(updates).eq('id',mn.id);
+  if(error){toast('Error: '+error.message);}
+  else{
+    Object.assign(mn,updates);nations[mn.id]=mn;
+    updateNatUI();updateFlagLeader();
+    toast('✓ Nation identity updated!');
+    closeFleModal();
+  }
+  btn.disabled=false;btn.textContent='[ SAVE CHANGES ]';
+};
+
 // ── OWNER PANEL ────────────────────────────────────────────
 window.openOwner=function(){
   if(!isOwner){toast('Access denied');return;}
@@ -672,7 +776,7 @@ window.openOwner=function(){
   document.getElementById('ogT').innerHTML=Object.keys(GOVS).map(g=>`<option>${g}</option>`).join('');
   document.getElementById('ownerPanel').classList.add('open');
 };
-function closeOwner(){document.getElementById('ownerPanel').classList.remove('open');};
+window.closeOwner=function(){document.getElementById('ownerPanel').classList.remove('open');};
 window.ownerDel=async function(){
   const nid=document.getElementById('odN').value,n=nations[nid];
   if(!n||!confirm(`DELETE "${n.name}"?`))return;
@@ -706,6 +810,21 @@ window.ownerGov=async function(){
 };
 
 // ── MOBILE SIDEBAR ─────────────────────────────────────────
+
+// ── DESKTOP SIDEBAR TOGGLE ─────────────────────────────────
+window.toggleSbDesktop=function(){
+  const sb=document.getElementById('sb'),btn=document.getElementById('sbToggleBtn');
+  if(sb.classList.contains('collapsed')){
+    sb.classList.remove('collapsed');
+    sb.classList.add('pinned');
+    btn.textContent='◀ INFO';
+  } else {
+    sb.classList.add('collapsed');
+    sb.classList.remove('pinned');
+    btn.textContent='▶ INFO';
+  }
+};
+
 window.toggleSb=function(){
   const sb=document.getElementById('sb'),ov=document.getElementById('sbOverlay');
   const wasOpen=sb.classList.contains('open');
@@ -725,9 +844,11 @@ function closePanels(){
 };
 function setupMobile(){
   const mb=document.getElementById('mobSbBtn'),mrb=document.getElementById('mobRpBtn');
-  if(window.innerWidth<=768){mb.style.display='block';mrb.style.display='block';}
+  const stb=document.getElementById('sbToggleBtn');
+  if(window.innerWidth<=768){mb.style.display='block';mrb.style.display='block';if(stb)stb.style.display='none';}
   else{
     mb.style.display='none';mrb.style.display='none';
+    if(stb)stb.style.display='block';
     document.getElementById('sb').classList.remove('open');
     document.getElementById('rp').classList.remove('open');
     document.getElementById('sbOverlay').style.display='none';
