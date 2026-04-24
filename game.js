@@ -264,6 +264,24 @@ function draw(){
     }
   }
 
+  // Capital markers (★ on capital province of every nation)
+  Object.values(nations).forEach(n=>{
+    if(!n.capital_id)return;
+    const cp=byId[n.capital_id];if(!cp)return;
+    for(let t=startT;t<=endT;t++){
+      const ox=panX*dpr+t*imgW;
+      const cx=ox+(cp.x/MAP_W)*sw, cy=dy+(cp.y/MAP_H)*sh;
+      if(cx<-20||cx>W+20)continue;
+      const nc=natColors[n.id]||[240,192,64];
+      ctx.font=`bold ${Math.max(9,Math.round(10*zoom))}px monospace`;
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.strokeStyle='rgba(0,0,0,.8)';ctx.lineWidth=3;
+      ctx.strokeText('★',cx,cy);
+      ctx.fillStyle=`rgba(${nc[0]},${nc[1]},${nc[2]},1)`;
+      ctx.fillText('★',cx,cy);
+    }
+  });
+
   // Selected province dot
   if(selProv){
     for(let t=startT;t<=endT;t++){
@@ -441,19 +459,32 @@ async function applyOfflineTick(nation){
     supply:Math.round(nation.supply+inc.sup*t),
     last_tick_at:new Date().toISOString(),
   };
+  // Apply weekly politician influence
+  const withPol=applyPoliticianInfluence({...nation,...updates});
+  Object.assign(updates,{party_support:withPol.party_support,last_pol_week:withPol.last_pol_week});
   await sb.from('wc_nations').update(updates).eq('id',nation.id);
   if(ticks>0)toast('Offline: collected '+t+' ticks of resources!');
   return{...nation,...updates};
 }
 
 function calcIncome(nid){
+  const nation=nations[nid]||mn;
   let gold=0,mp=0,sup=0;
   Object.entries(ownership).forEach(([pid,n])=>{
     if(n!==nid)return;
-    const p=byId[pid];
-    if(p){gold+=p.gold;mp+=p.manpower;sup+=p.supply;}
+    const p=byId[pid];if(!p)return;
+    const isCapProv=nation?.capital_id&&parseInt(pid)===nation.capital_id;
+    const mult=isCapProv?1.5:1; // capital +50%
+    gold+=p.gold*mult; mp+=p.manpower*mult; sup+=p.supply*mult;
   });
-  return{gold,mp,sup};
+  // Gov bonuses
+  const mod=GOVS[nation?.gov]?.bonus||'';
+  if(mod.includes('+20% Gold'))gold*=1.20;
+  else if(mod.includes('+15% Gold'))gold*=1.15;
+  if(mod.includes('+25% Manpower'))mp*=1.25;
+  else if(mod.includes('+15% Manpower'))mp*=1.15;
+  else if(mod.includes('+10% Manpower'))mp*=1.10;
+  return{gold:Math.max(1,Math.round(gold)),mp:Math.max(1,Math.round(mp)),sup:Math.max(1,Math.round(sup))};
 }
 
 // Local tick timer — updates every minute, applies full tick every TICK_HOURS
@@ -593,7 +624,7 @@ function updateFlagLeader(){
   }
 
   // ── Desktop sidebar toggle button visibility ─────────────
-  const stb=document.getElementById('sbToggleBtn');
+  const stb=document.getElementById('sbTogBtn');
   if(stb&&window.innerWidth>768) stb.style.display='block';
 }
 
@@ -682,28 +713,85 @@ function isAdj(pid){
 function showPanel(p){
   const oid=ownership[p.id],owner=oid?nations[oid]:null;
   const isOwn=mn&&oid===mn.id,isCap=mn&&mn.capital_id===p.id;
+  const capMark=isCap?'<span class="cap-star">★ CAPITAL</span><br>':'';
+
   document.getElementById('rpH').textContent=(isCap?'★ ':'')+p.name.toUpperCase();
-  // Nation info row (flag + gov) for owner
+
+  // Nation flag/portrait row in right panel
   let nationRow='';
   if(owner){
-    const flagHtml=owner.flag_url?`<img src="${owner.flag_url}" style="height:16px;border:1px solid rgba(255,255,255,.2);margin-right:5px;vertical-align:middle">`:''
     const govColor=(GOVS[owner.gov]?.color)||'#aaa';
-    nationRow=`<div class="irow" style="align-items:center">${flagHtml}<span class="ik">GOV</span><span class="iv" style="color:${govColor}">${owner.gov||'—'}</span></div>`;
-    if(owner.ruler) nationRow+=row('RULER',owner.ruler,'');
+    if(owner.flag_url) nationRow+=`<div class="irow"><img src="${owner.flag_url}" style="height:18px;border:1px solid rgba(255,255,255,.15);margin-right:4px;vertical-align:middle"><span class="ik">NATION</span><span class="iv" style="color:#c8e8ff">${owner.name}</span></div>`;
+    nationRow+=`<div class="irow"><span class="ik">GOV</span><span class="iv" style="color:${govColor}">${owner.gov||'—'}</span></div>`;
+    if(owner.ruler){
+      const portHtml=owner.leader_url?`<img src="${owner.leader_url}" style="width:20px;height:26px;object-fit:cover;object-position:top;border:1px solid rgba(240,192,64,.3);margin-right:5px;vertical-align:middle">`:''
+      nationRow+=`<div class="irow" style="align-items:center">${portHtml}<span class="ik">RULER</span><span class="iv cy">${owner.ruler}</span></div>`;
+    }
+    if(owner.stability!==undefined) nationRow+=row('STABILITY',owner.stability+'%',owner.stability>60?'gr':owner.stability>30?'':'rd');
   }
-  let html=[row('TERRAIN',p.terrain),row('OWNER',owner?owner.name:'Unclaimed',owner?(isOwn?'gd':'rd'):'cy'),nationRow,'<div class="rdiv"></div>','<div class="rsec">YIELD / TICK</div>',row('Gold','+'+p.gold,'gd'),row('Manpower','+'+p.manpower,''),row('Supplies','+'+p.supply,''),'<div class="rdiv"></div>','<div class="rsec">ACTIONS</div>'].join('');
+
+  let html=[capMark,row('TERRAIN',p.terrain),row('OWNER',owner?owner.name:'Unclaimed',owner?(isOwn?'gd':'rd'):'cy'),nationRow,'<div class="rdiv"></div>','<div class="rsec">YIELD / TICK</div>',row('Gold','+'+p.gold,'gd'),row('Manpower','+'+p.manpower,''),row('Supplies','+'+p.supply,''),'<div class="rdiv"></div>','<div class="rsec">ACTIONS</div>'].join('');
+
   let acts='';
-  if(!cu){acts=btn('Login to interact','prim','document.getElementById("auth").style.display="flex"');}
-  else if(isOwn){acts+=btn('⚒ Build (Phase 3)','prim','toast("Building system coming in Phase 3")');acts+=btn('⚔ Recruit (Phase 4)','prim','toast("Military system coming in Phase 4")');}
-  else if(!oid&&mn){const adj=isAdj(p.id);acts+=btn('▶ Claim (30 Gold)','prim','claimP('+p.id+')',!adj,adj?'':'Not adjacent to your territory');}
-  else if(oid&&!isOwn&&mn){acts+=btn('⚔ Declare War (Phase 4)','dng','toast("War system coming in Phase 4")');acts+=btn('✉ Send Envoy (Phase 3)','prim','toast("Diplomacy coming in Phase 3")');}
+  if(!cu){
+  acts = btn(
+    'Login to interact',
+    'prim',
+    `document.getElementById('auth').style.display='flex'`
+  );
+}
+else if(isOwn){
+  acts += btn(
+    '⚒ Build (Phase 3)',
+    'prim',
+    `toast('Building system coming in Phase 3')`
+  );
+
+  acts += btn(
+    '⚔ Recruit (Phase 4)',
+    'prim',
+    `toast('Military system coming in Phase 4')`
+  );
+
+  acts += btn(
+    '📜 Open Politics',
+    'warn',
+    `openPolModal()`
+  );
+}
+else if(!oid && mn){
+  const adj = isAdj(p.id);
+
+  acts += btn(
+    '▶ Claim (30 Gold)',
+    'prim',
+    `claimP(${p.id})`,
+    !adj,
+    adj ? '' : 'Not adjacent to your territory'
+  );
+}
+else if(oid && !isOwn && mn){
+  acts += btn(
+    '⚔ Declare War (Phase 4)',
+    'dng',
+    `toast('War system coming in Phase 4')`
+  );
+
+  acts += btn(
+    '✉ Send Envoy (Phase 3)',
+    'prim',
+    `toast('Diplomacy coming in Phase 3')`
+  );
+}
   else if(!mn&&cu){acts+=btn('⚑ Found Nation Here','prim','openSetup()');}
   document.getElementById('rpB').innerHTML=html+acts;
-  // Open right panel on mobile, left sidebar when clicking own territory
+
   if(window.innerWidth<=768){document.getElementById('rp').classList.add('open');}
-  if(window.innerWidth>768 && mn && ownership[p.id]===mn.id){
-    document.getElementById('sb').classList.remove('collapsed');
-    document.getElementById('sb').classList.add('pinned');
+  if(window.innerWidth>768){
+    const sbEl=document.getElementById('sb');
+    sbEl.classList.remove('collapsed');
+    const stb=document.getElementById('sbTogBtn');
+    if(stb)stb.textContent='◀';
   }
 }
 
@@ -877,7 +965,7 @@ window.ownerGov=async function(){
 
 // ── DESKTOP SIDEBAR TOGGLE ─────────────────────────────────
 window.toggleSbDesktop=function(){
-  const sb=document.getElementById('sb'),btn=document.getElementById('sbToggleBtn');
+  const sb=document.getElementById('sb'),btn=document.getElementById('sbTogBtn');
   if(sb.classList.contains('collapsed')){
     sb.classList.remove('collapsed');
     sb.classList.add('pinned');
@@ -908,7 +996,7 @@ function closePanels(){
 };
 function setupMobile(){
   const mb=document.getElementById('mobSbBtn'),mrb=document.getElementById('mobRpBtn');
-  const stb=document.getElementById('sbToggleBtn');
+  const stb=document.getElementById('sbTogBtn');
   if(window.innerWidth<=768){mb.style.display='block';mrb.style.display='block';if(stb)stb.style.display='none';}
   else{
     mb.style.display='none';mrb.style.display='none';
@@ -935,3 +1023,143 @@ window.toast=function(m){const t=document.getElementById('toast');t.textContent=
   document.getElementById('lP').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
   onGC();resize();
 })();
+// ══ POLITICS SYSTEM ══════════════════════════════════════════
+const POLITICIAN_NAMES = [
+  'Ada Morrow','Ben Holloway','Celeste Vrayne','Dax Orlen','Elena Prast',
+  'Felix Carn','Greer Tallis','Hana Voss','Idris Kelm','Juno Ardell',
+  'Kae Solvan','Lyra Penn','Mico Thane','Nara Osten','Oz Falcone',
+  'Petra Drex','Quin Alvare','Rosa Nett','Sven Cael','Tia Morvan',
+  'Uwe Strand','Vera Loch','Ward Eskin','Xara Dune','Yael Brisk',
+  'Zeno Falk','Asha Kiran','Bram Soleil','Cira Weiss','Demi Foret'
+];
+
+const LAWS = {
+  free_press:  {name:'Free Press',   effect:'+5% Stability, -5% Gold',   govs:['Paperist Democracy','Classical Liberalism','Aesthetic Democracy']},
+  state_media: {name:'State Media',  effect:'+10% Stability, -10% Support diversity', govs:['Autocracy','Neo-Authoritarianism','Superiority Radicalism']},
+  open_market: {name:'Open Markets', effect:'+15% Gold, -5% Manpower',   govs:['Classical Liberalism','Eclecticism','Post-Modernism']},
+  conscript:   {name:'Conscription', effect:'+20% Manpower, -10% Gold',  govs:['Third Positionism','Superiority Radicalism','Paperolutionary Left']},
+  land_reform: {name:'Land Reform',  effect:'+10% Supply, +5% Stability',govs:['Reformatorist Left','Paperolutionary Left','Institutionalism']},
+  theocratic:  {name:'Sacred Law',   effect:'+15% Stability, -5% Growth',govs:['Traditionalist Right','Institutionalism']},
+  open_border: {name:'Open Borders', effect:'+10% Manpower, +5% Stability',govs:['Anarchism','Post-Modernism','Aesthetic Democracy']},
+  war_economy: {name:'War Economy',  effect:'+20% Army, -15% Gold',      govs:['Third Positionism','Superiority Radicalism','Neo-Authoritarianism']},
+};
+
+function genPoliticians(govName, seed){
+  // Deterministic pseudo-random from seed (week number + nation id)
+  const rng=(s=>()=>{s=Math.sin(s)*43758.5453;return s-(s|0);})(seed);
+  const govKeys=Object.keys(GOVS);
+  return Array.from({length:5},(_,i)=>{
+    const ni=Math.floor(rng()*POLITICIAN_NAMES.length);
+    const gi=Math.floor(rng()*govKeys.length);
+    const ideo=govKeys[gi];
+    const g=GOVS[ideo];
+    const influence=Math.round(5+rng()*20); // 5-25% party support change
+    return{name:POLITICIAN_NAMES[(ni+i)%POLITICIAN_NAMES.length], ideology:ideo, color:g.color, influence, idx:i};
+  });
+}
+
+let polTabActive='politicians';
+window.openPolModal=function(){
+  if(!mn){toast('No nation');return;}
+  document.getElementById('polModal').classList.add('open');
+  renderPolTab();
+};
+window.closePolModal=function(){document.getElementById('polModal').classList.remove('open');};
+window.polTab=function(t){
+  polTabActive=t;
+  document.querySelectorAll('.pol-tab').forEach((el,i)=>{
+    el.classList.toggle('active',['politicians','laws','support'][i]===t);
+  });
+  renderPolTab();
+};
+
+function renderPolTab(){
+  const el=document.getElementById('polBody');
+  if(!el)return;
+  if(polTabActive==='politicians') el.innerHTML=renderPoliticians();
+  else if(polTabActive==='laws')   el.innerHTML=renderLaws();
+  else                             el.innerHTML=renderSupport();
+}
+
+function renderPoliticians(){
+  const week=Math.floor(Date.now()/(7*24*3600000));
+  const seed=(week*1000)+(parseInt(mn.id.replace(/-/g,'').slice(0,8),16)||0);
+  const pols=genPoliticians(mn.gov,seed);
+  const nextChange=new Date((week+1)*7*24*3600000);
+  const dd=String(nextChange.getDate()).padStart(2,'0');
+  const mm=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][nextChange.getMonth()];
+  let html=`<div style="font-size:8px;color:rgba(200,232,255,.3);margin-bottom:10px;letter-spacing:.1em">Reshuffles every 7 days · Next: ${dd} ${mm} ${nextChange.getFullYear()}</div>`;
+  pols.forEach(p=>{
+    html+=`<div class="pol-card">
+      <div class="pol-name">${p.name}</div>
+      <div class="pol-ideo" style="color:${p.color}">${p.ideology} · ${p.influence}% influence</div>
+      <div class="pol-effect">Active: +${p.influence}% support for ${p.ideology.slice(0,20)}...</div>
+    </div>`;
+  });
+  html+=`<div style="font-size:8px;color:rgba(200,232,255,.25);margin-top:8px">Politicians passively shift party support toward their ideology each week.</div>`;
+  return html;
+}
+
+function renderLaws(){
+  const active=mn.active_laws||[];
+  let html='';
+  Object.entries(LAWS).forEach(([key,law])=>{
+    const isActive=active.includes(key);
+    const available=law.govs.includes(mn.gov);
+    html+=`<div class="law-card${isActive?' active':''}" onclick="${available?`toggleLaw('${key}')`:''}" ${!available?'style="opacity:.4;cursor:not-allowed"':''}>
+      <div class="law-name">${law.name}${isActive?' ✓':''}</div>
+      <div class="law-effect">${law.effect}</div>
+      <div style="font-size:7px;color:rgba(200,232,255,.2);margin-top:3px">${available?'Available for '+mn.gov:'Requires: '+law.govs.slice(0,2).join(' / ')}</div>
+    </div>`;
+  });
+  return html;
+}
+
+function renderSupport(){
+  const sup=mn.party_support||{};
+  const sorted=Object.entries(GOVS).sort((a,b)=>(sup[b[0]]||0)-(sup[a[0]]||0));
+  let html='<div style="font-size:8px;color:rgba(200,232,255,.3);margin-bottom:8px;letter-spacing:.1em">Current government: <span style="color:#f0c040">'+mn.gov+'</span></div>';
+  sorted.forEach(([name,g])=>{
+    const pct=sup[name]||0;
+    const isCur=name===mn.gov;
+    html+=`<div style="margin-bottom:7px">
+      <div style="display:flex;justify-content:space-between;font-size:9px;color:${isCur?g.color:'rgba(200,232,255,.45)'};margin-bottom:3px">
+        <span>${isCur?'★ ':''  }${name}</span><span>${pct}%</span>
+      </div>
+      <div style="height:5px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${g.color};border-radius:3px;transition:width .5s"></div>
+      </div>
+    </div>`;
+  });
+  return html;
+}
+
+window.toggleLaw=async function(key){
+  if(!mn)return;
+  const active=[...(mn.active_laws||[])];
+  const idx=active.indexOf(key);
+  if(idx>=0) active.splice(idx,1);
+  else if(active.length>=3){toast('Max 3 active laws');return;}
+  else active.push(key);
+  const{error}=await sb.from('wc_nations').update({active_laws:active}).eq('id',mn.id);
+  if(!error){mn.active_laws=active;nations[mn.id]=mn;renderPolTab();toast(idx>=0?'Law repealed':'Law enacted');}
+  else toast('Error: '+error.message);
+};
+
+// Weekly politician influence tick (runs on login + each tick)
+function applyPoliticianInfluence(nat){
+  const week=Math.floor(Date.now()/(7*24*3600000));
+  const lastWeek=nat.last_pol_week||0;
+  if(week<=lastWeek)return nat; // already applied this week
+  const seed=(week*1000)+(parseInt(nat.id.replace(/-/g,'').slice(0,8),16)||0);
+  const pols=genPoliticians(nat.gov,seed);
+  const sup={...nat.party_support||{}};
+  pols.forEach(p=>{
+    sup[p.ideology]=(sup[p.ideology]||0)+p.influence;
+    // Normalize: cap at 80, floor at 1
+    Object.keys(sup).forEach(k=>{sup[k]=Math.max(1,Math.min(80,sup[k]));});
+    // Drain other parties slightly
+    Object.keys(GOVS).forEach(k=>{if(k!==p.ideology)sup[k]=Math.max(1,(sup[k]||5)-1);});
+  });
+  return{...nat, party_support:sup, last_pol_week:week};
+}

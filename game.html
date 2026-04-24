@@ -213,7 +213,7 @@
       <div class="fle-row">
         <div class="fle-col">
           <div class="fle-label">NATION FLAG</div>
-          <input type="file" id="fleFlag" accept="image/*" style="display:none" onchange="previewFile(this,'fleFlagPrev')">
+          <input type="file" id="fleFlag" accept="image/*" style="display:none" onchange="(function(i){var p=document.getElementById('fleFlagPrev');p.src=URL.createObjectURL(i.files[0]);p.style.display='block';})(this)">
           <div class="fupzone" style="--c:#00d4ff" onclick="document.getElementById('fleFlag').click()">Click to upload flag</div>
           <img id="fleFlagPrev" class="fle-preview" src="" alt="">
           <div class="fle-label" style="margin-top:8px">CURRENT FLAG</div>
@@ -221,7 +221,7 @@
         </div>
         <div class="fle-col">
           <div class="fle-label">LEADER PORTRAIT</div>
-          <input type="file" id="fleLeader" accept="image/*" style="display:none" onchange="previewFile(this,'fleLeaderPrev')">
+          <input type="file" id="fleLeader" accept="image/*" style="display:none" onchange="(function(i){var p=document.getElementById('fleLeaderPrev');p.src=URL.createObjectURL(i.files[0]);p.style.display='block';})(this)">
           <div class="fupzone" style="--c:#f0c040" onclick="document.getElementById('fleLeader').click()">Click to upload portrait</div>
           <img id="fleLeaderPrev" class="fle-preview-r" src="" alt="">
           <div class="fle-label" style="margin-top:8px">CURRENT LEADER</div>
@@ -235,6 +235,25 @@
       <div class="fle-cd" id="fleCooldown"></div>
       <button class="fle-submit" id="fleSubmit" onclick="fleSubmit()">[ SAVE CHANGES ]</button>
     </div>
+  </div>
+</div>
+
+<!-- SIDEBAR TOGGLE (desktop) -->
+<button id="sbTogBtn" onclick="toggleSbDesktop()" title="Toggle info panel">▶ INFO</button>
+
+<!-- POLITICS MODAL -->
+<div id="polModal">
+  <div class="pol-box">
+    <div class="pol-bar">
+      <span>📜 POLITICAL CABINET</span>
+      <button onclick="closePolModal()" style="background:none;border:none;color:rgba(240,192,64,.5);cursor:pointer;font-family:inherit;font-size:10px">[ X ]</button>
+    </div>
+    <div class="pol-tabs">
+      <button class="pol-tab active" onclick="polTab('politicians')">POLITICIANS</button>
+      <button class="pol-tab" onclick="polTab('laws')">LAWS</button>
+      <button class="pol-tab" onclick="polTab('support')">PARTY SUPPORT</button>
+    </div>
+    <div class="pol-body" id="polBody"></div>
   </div>
 </div>
 
