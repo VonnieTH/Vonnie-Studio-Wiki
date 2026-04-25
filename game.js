@@ -1032,14 +1032,223 @@ window.toast=function(m){const t=document.getElementById('toast');t.textContent=
   onGC();resize();
 })();
 // ══ POLITICS SYSTEM ══════════════════════════════════════════
+// ══ POLITICS SYSTEM v2 — POSITIONS ══════════════════════════
 const POLITICIAN_NAMES = [
   'Ada Morrow','Ben Holloway','Celeste Vrayne','Dax Orlen','Elena Prast',
   'Felix Carn','Greer Tallis','Hana Voss','Idris Kelm','Juno Ardell',
   'Kae Solvan','Lyra Penn','Mico Thane','Nara Osten','Oz Falcone',
   'Petra Drex','Quin Alvare','Rosa Nett','Sven Cael','Tia Morvan',
   'Uwe Strand','Vera Loch','Ward Eskin','Xara Dune','Yael Brisk',
-  'Zeno Falk','Asha Kiran','Bram Soleil','Cira Weiss','Demi Foret'
+  'Zeno Falk','Asha Kiran','Bram Soleil','Cira Weiss','Demi Foret',
+  'Elia Strand','Fara Osten','Gael Nett','Hiro Penn','Iris Falcone'
 ];
+
+// Cabinet positions — each has a role, effect, and lifespan (weeks)
+const POSITIONS = {
+  prime_minister: {
+    title:'Prime Minister', icon:'👑',
+    role:'Heads the government. Provides stability and sets national direction.',
+    effect: p => '+'+p.influence+'% Stability / week',
+    apply: (sup,p) => { /* stability boost handled in tick */ },
+    lifespan:[4,8], // 4-8 weeks
+  },
+  finance_minister: {
+    title:'Finance Minister', icon:'💰',
+    role:'Manages the national treasury. Boosts gold income.',
+    effect: p => '+'+p.influence+'% Gold income',
+    apply: (sup,p) => {},
+    lifespan:[3,6],
+  },
+  war_minister: {
+    title:'War Minister', icon:'⚔️',
+    role:'Commands military affairs. Boosts manpower recruitment.',
+    effect: p => '+'+p.influence+'% Manpower gain',
+    apply: (sup,p) => {},
+    lifespan:[2,5],
+  },
+  interior_minister: {
+    title:'Interior Minister', icon:'🏛️',
+    role:'Maintains order and infrastructure. Boosts supply output.',
+    effect: p => '+'+p.influence+'% Supply output',
+    apply: (sup,p) => {},
+    lifespan:[3,7],
+  },
+  ideology_director: {
+    title:'Ideology Director', icon:'📢',
+    role:'Shapes public opinion. Shifts party support toward their ideology.',
+    effect: p => '+'+p.influence+'% support for '+p.ideology.slice(0,18)+'...',
+    apply: (sup,p) => { sup[p.ideology]=(sup[p.ideology]||0)+p.influence; },
+    lifespan:[2,4],
+  },
+};
+
+// CSP-safe seeded RNG (no Math.sin string eval)
+function mkRng(seed){
+  let s=seed>>>0;
+  return function(){
+    s=(s^(s<<13))>>>0;s=(s^(s>>>17))>>>0;s=(s^(s<<5))>>>0;
+    return(s>>>0)/4294967296;
+  };
+}
+
+function getNationSeed(nat){
+  const idHex=nat.id.replace(/-/g,'').slice(0,8);
+  return parseInt(idHex,16)||12345;
+}
+
+// Generate cabinet for a given week
+function genCabinet(nat, week){
+  const baseSeed=(getNationSeed(nat)^(week*0x9e3779b9))>>>0;
+  const rng=mkRng(baseSeed);
+  const govKeys=Object.keys(GOVS);
+  const usedNames=new Set();
+
+  return Object.entries(POSITIONS).map(([posKey,pos])=>{
+    // Pick ideology
+    let ideo,g,attempts=0;
+    do{ ideo=govKeys[Math.floor(rng()*govKeys.length)]; g=GOVS[ideo]; attempts++; }
+    while((!g||!g.color)&&attempts<20);
+    if(!g||!g.color){ideo=govKeys[0];g=GOVS[ideo]||{color:'#aaa'};}
+
+    // Pick name (no duplicates)
+    let name,nameIdx,nameAttempts=0;
+    do{
+      nameIdx=Math.floor(rng()*POLITICIAN_NAMES.length);
+      name=POLITICIAN_NAMES[nameIdx];
+      nameAttempts++;
+    }while(usedNames.has(name)&&nameAttempts<30);
+    usedNames.add(name);
+
+    const influence=3+Math.floor(rng()*13); // 3-15%
+    const [minL,maxL]=pos.lifespan;
+    const weeksLeft=minL+Math.floor(rng()*(maxL-minL+1));
+
+    return{posKey,title:pos.title,icon:pos.icon,name,ideology:ideo,
+           color:g.color,influence,weeksLeft,role:pos.role,
+           effectText:pos.effect({influence})};
+  });
+}
+
+// Cabinet appointments stored in wc_nations.cabinet (jsonb)
+// Format: [{posKey, name, ideology, color, influence, appointedWeek, weeksLeft}]
+function getCurrentCabinet(nat){
+  const week=Math.floor(Date.now()/(7*24*3600000));
+  const stored=nat.cabinet||[];
+  // Check if any position needs replacing (expired)
+  const auto=genCabinet(nat,week);
+  if(!stored.length) return auto.map(p=>({...p,appointedWeek:week}));
+  // Merge: keep manually appointed if not expired, else use auto
+  return auto.map(auto_p=>{
+    const found=stored.find(s=>s.posKey===auto_p.posKey);
+    if(found){
+      const expireWeek=(found.appointedWeek||week)+found.weeksLeft;
+      if(week<expireWeek) return found; // still active
+    }
+    return{...auto_p,appointedWeek:week};
+  });
+}
+
+let polTabActive='cabinet';
+window.openPolModal=function(){
+  if(!mn){toast('No nation');return;}
+  document.getElementById('polModal').classList.add('open');
+  renderPolTab();
+};
+window.closePolModal=function(){document.getElementById('polModal').classList.remove('open');};
+window.polTab=function(t){
+  polTabActive=t;
+  document.querySelectorAll('.pol-tab').forEach(el=>{
+    el.classList.toggle('active',el.dataset.tab===t);
+  });
+  renderPolTab();
+};
+
+function renderPolTab(){
+  const el=document.getElementById('polBody');if(!el)return;
+  if(polTabActive==='cabinet')       el.innerHTML=renderCabinet();
+  else if(polTabActive==='laws')     el.innerHTML=renderLaws();
+  else if(polTabActive==='support')  el.innerHTML=renderSupport();
+}
+
+function renderCabinet(){
+  const week=Math.floor(Date.now()/(7*24*3600000));
+  const cabinet=getCurrentCabinet(mn);
+  const nextDate=new Date((week+1)*7*24*3600000);
+  const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const nextStr=String(nextDate.getDate()).padStart(2,'0')+' '+MONTHS[nextDate.getMonth()]+' '+nextDate.getFullYear();
+  let html='<div style="font-size:8px;color:rgba(200,232,255,.3);margin-bottom:10px;letter-spacing:.08em">'
+    +'Weekly reshuffle · Next: '+nextStr
+    +'<br>Ministers have limited terms — expired ones are replaced automatically.</div>';
+  cabinet.forEach(p=>{
+    const expireWeek=(p.appointedWeek||week)+p.weeksLeft;
+    const wLeft=Math.max(0,expireWeek-week);
+    const pct=Math.round((wLeft/p.weeksLeft)*100);
+    const pos=POSITIONS[p.posKey];
+    html+='<div class="pol-card" style="border-color:'+p.color+'22">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px">'
+      +'<div>'
+      +'<div style="font-size:8px;color:rgba(200,232,255,.35);letter-spacing:.1em;margin-bottom:2px">'+(pos?.icon||'')+'  '+(p.title||p.posKey).toUpperCase()+'</div>'
+      +'<div class="pol-name">'+p.name+'</div>'
+      +'<div class="pol-ideo" style="color:'+p.color+'">'+p.ideology+'</div>'
+      +'<div class="pol-effect">'+p.effectText+'</div>'
+      +'<div style="font-size:8px;color:rgba(200,232,255,.35);margin-top:2px;font-style:italic">'+(pos?.role||'')+'</div>'
+      +'</div>'
+      +'<div style="text-align:right;flex-shrink:0">'
+      +'<div style="font-size:9px;color:'+(wLeft<=1?'#ff6b6b':'#40ff80')+'">'+wLeft+'w left</div>'
+      +'<div style="width:40px;height:3px;background:rgba(255,255,255,.08);border-radius:2px;margin-top:3px;overflow:hidden">'
+      +'<div style="height:100%;width:'+pct+'%;background:'+p.color+';border-radius:2px"></div></div>'
+      +'</div></div>'
+      +'<button onclick="openAppoint(\''+p.posKey+'\')" style="margin-top:7px;font-family:inherit;font-size:7px;letter-spacing:.08em;padding:2px 8px;border:1px solid rgba(0,212,255,.2);background:transparent;color:rgba(0,212,255,.5);cursor:pointer;width:100%">✎ APPOINT SOMEONE ELSE</button>'
+      +'</div>';
+  });
+  return html;
+}
+
+// Appoint custom minister
+let appointingPos=null;
+window.openAppoint=function(posKey){
+  appointingPos=posKey;
+  const pos=POSITIONS[posKey];
+  const week=Math.floor(Date.now()/(7*24*3600000));
+  const rng=mkRng((getNationSeed(mn)^week^posKey.length*997)>>>0);
+  // Generate 3 candidates to pick from
+  const govKeys=Object.keys(GOVS);
+  const candidates=[];const used=new Set();
+  for(let i=0;i<3;i++){
+    let name,ideo,g,att=0;
+    do{name=POLITICIAN_NAMES[Math.floor(rng()*POLITICIAN_NAMES.length)];att++;}while(used.has(name)&&att<20);
+    used.add(name);
+    att=0;
+    do{ideo=govKeys[Math.floor(rng()*govKeys.length)];g=GOVS[ideo];att++;}while((!g||!g.color)&&att<20);
+    if(!g||!g.color){ideo=govKeys[0];g=GOVS[ideo];}
+    candidates.push({name,ideology:ideo,color:g.color,influence:3+Math.floor(rng()*13)});
+  }
+  const el=document.getElementById('polBody');
+  let html='<button onclick="renderPolTab()" style="font-family:inherit;font-size:8px;padding:3px 8px;border:1px solid rgba(0,212,255,.2);background:transparent;color:rgba(0,212,255,.5);cursor:pointer;margin-bottom:12px">← Back</button>'
+    +'<div style="font-size:9px;color:#f0c040;margin-bottom:8px">Appoint new '+(pos?.icon||'')+' '+(pos?.title||posKey)+'</div>'
+    +'<div style="font-size:8px;color:rgba(200,232,255,.3);margin-bottom:10px">'+( pos?.role||'')+'</div>';
+  candidates.forEach((c,i)=>{
+    html+='<div class="pol-card" style="cursor:pointer;border-color:'+c.color+'33" onclick="confirmAppoint('+i+')">'
+      +'<div class="pol-name">'+c.name+'</div>'
+      +'<div class="pol-ideo" style="color:'+c.color+'">'+c.ideology+' · '+c.influence+'% influence</div>'
+      +'<div class="pol-effect">'+(pos?pos.effect(c):'')+'</div>'
+      +'</div>';
+  });
+  el.innerHTML=html;
+  window._appointCandidates=candidates;
+};
+window.confirmAppoint=async function(idx){
+  const c=window._appointCandidates[idx];
+  const pos=POSITIONS[appointingPos];
+  if(!c||!pos||!mn)return;
+  const week=Math.floor(Date.now()/(7*24*3600000));
+  const cabinet=getCurrentCabinet(mn);
+  const entry=cabinet.find(p=>p.posKey===appointingPos);
+  if(entry){Object.assign(entry,c,{posKey:appointingPos,title:pos.title,icon:pos.icon,effectText:pos.effect(c),appointedWeek:week,weeksLeft:pos.lifespan[0]+Math.floor(Math.random()*(pos.lifespan[1]-pos.lifespan[0]+1))});}
+  const{error}=await sb.from('wc_nations').update({cabinet}).eq('id',mn.id);
+  if(!error){mn.cabinet=cabinet;nations[mn.id]=mn;polTabActive='cabinet';renderPolTab();toast('✓ '+c.name+' appointed as '+pos.title);}
+  else toast('Error: '+error.message);
+};
 
 const LAWS = {
   free_press:  {name:'Free Press',   effect:'+5% Stability, -5% Gold',   govs:['Paperist Democracy','Classical Liberalism','Aesthetic Democracy']},
@@ -1052,77 +1261,20 @@ const LAWS = {
   war_economy: {name:'War Economy',  effect:'+20% Army, -15% Gold',      govs:['Third Positionism','Superiority Radicalism','Neo-Authoritarianism']},
 };
 
-function genPoliticians(govName, seed){
-  const rng=(s=>()=>{s=Math.sin(s)*43758.5453;return s-(s|0);})(seed);
-  const govKeys=Object.keys(GOVS);
-  const result=[];
-  let attempts=0;
-  while(result.length<5 && attempts<50){
-    attempts++;
-    const ni=Math.floor(rng()*POLITICIAN_NAMES.length);
-    const gi=Math.floor(rng()*govKeys.length);
-    const ideo=govKeys[gi];
-    const g=GOVS[ideo];
-    if(!g||!g.color)continue; // guard against undefined
-    const influence=Math.round(5+rng()*20);
-    result.push({name:POLITICIAN_NAMES[(ni+result.length)%POLITICIAN_NAMES.length], ideology:ideo, color:g.color, influence, idx:result.length});
-  }
-  return result;
-}
-
-let polTabActive='politicians';
-window.openPolModal=function(){
-  if(!mn){toast('No nation');return;}
-  document.getElementById('polModal').classList.add('open');
-  renderPolTab();
-};
-window.closePolModal=function(){document.getElementById('polModal').classList.remove('open');};
-window.polTab=function(t){
-  polTabActive=t;
-  document.querySelectorAll('.pol-tab').forEach((el,i)=>{
-    el.classList.toggle('active',['politicians','laws','support'][i]===t);
-  });
-  renderPolTab();
-};
-
-function renderPolTab(){
-  const el=document.getElementById('polBody');
-  if(!el)return;
-  if(polTabActive==='politicians') el.innerHTML=renderPoliticians();
-  else if(polTabActive==='laws')   el.innerHTML=renderLaws();
-  else                             el.innerHTML=renderSupport();
-}
-
-function renderPoliticians(){
-  const week=Math.floor(Date.now()/(7*24*3600000));
-  const seed=(week*1000)+(parseInt(mn.id.replace(/-/g,'').slice(0,8),16)||0);
-  const pols=genPoliticians(mn.gov,seed);
-  const nextChange=new Date((week+1)*7*24*3600000);
-  const dd=String(nextChange.getDate()).padStart(2,'0');
-  const mm=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][nextChange.getMonth()];
-  let html=`<div style="font-size:8px;color:rgba(200,232,255,.3);margin-bottom:10px;letter-spacing:.1em">Reshuffles every 7 days · Next: ${dd} ${mm} ${nextChange.getFullYear()}</div>`;
-  pols.forEach(p=>{
-    html+=`<div class="pol-card">
-      <div class="pol-name">${p.name}</div>
-      <div class="pol-ideo" style="color:${p.color}">${p.ideology} · ${p.influence}% influence</div>
-      <div class="pol-effect">Active: +${p.influence}% support for ${p.ideology.slice(0,20)}...</div>
-    </div>`;
-  });
-  html+=`<div style="font-size:8px;color:rgba(200,232,255,.25);margin-top:8px">Politicians passively shift party support toward their ideology each week.</div>`;
-  return html;
-}
-
 function renderLaws(){
   const active=mn.active_laws||[];
   let html='';
   Object.entries(LAWS).forEach(([key,law])=>{
     const isActive=active.includes(key);
     const available=law.govs.includes(mn.gov);
-    html+=`<div class="law-card${isActive?' active':''}" onclick="${available?`toggleLaw('${key}')`:''}" ${!available?'style="opacity:.4;cursor:not-allowed"':''}>
-      <div class="law-name">${law.name}${isActive?' ✓':''}</div>
-      <div class="law-effect">${law.effect}</div>
-      <div style="font-size:7px;color:rgba(200,232,255,.2);margin-top:3px">${available?'Available for '+mn.gov:'Requires: '+law.govs.slice(0,2).join(' / ')}</div>
-    </div>`;
+    const cls='law-card'+(isActive?' active':'')+(available?'':' locked');
+    const onclick=available?'onclick="toggleLaw(\''+key+'\')"':'';
+    const style=available?'':'style="opacity:.4;cursor:not-allowed"';
+    html+='<div class="'+cls+'" '+onclick+' '+style+'>'
+      +'<div class="law-name">'+law.name+(isActive?' ✓':'')+'</div>'
+      +'<div class="law-effect">'+law.effect+'</div>'
+      +'<div style="font-size:7px;color:rgba(200,232,255,.2);margin-top:3px">'+(available?'Available for '+mn.gov:'Requires: '+law.govs.slice(0,2).join(' / '))+'</div>'
+      +'</div>';
   });
   return html;
 }
@@ -1134,14 +1286,12 @@ function renderSupport(){
   sorted.forEach(([name,g])=>{
     const pct=sup[name]||0;
     const isCur=name===mn.gov;
-    html+=`<div style="margin-bottom:7px">
-      <div style="display:flex;justify-content:space-between;font-size:9px;color:${isCur?g.color:'rgba(200,232,255,.45)'};margin-bottom:3px">
-        <span>${isCur?'★ ':''  }${name}</span><span>${pct}%</span>
-      </div>
-      <div style="height:5px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden">
-        <div style="height:100%;width:${pct}%;background:${g.color};border-radius:3px;transition:width .5s"></div>
-      </div>
-    </div>`;
+    html+='<div style="margin-bottom:7px">'
+      +'<div style="display:flex;justify-content:space-between;font-size:9px;color:'+(isCur?g.color:'rgba(200,232,255,.45)')+';margin-bottom:3px">'
+      +'<span>'+(isCur?'★ ':'')+name+'</span><span>'+pct+'%</span></div>'
+      +'<div style="height:5px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden">'
+      +'<div style="height:100%;width:'+pct+'%;background:'+g.color+';border-radius:3px;transition:width .5s"></div></div>'
+      +'</div>';
   });
   return html;
 }
@@ -1150,7 +1300,7 @@ window.toggleLaw=async function(key){
   if(!mn)return;
   const active=[...(mn.active_laws||[])];
   const idx=active.indexOf(key);
-  if(idx>=0) active.splice(idx,1);
+  if(idx>=0)active.splice(idx,1);
   else if(active.length>=3){toast('Max 3 active laws');return;}
   else active.push(key);
   const{error}=await sb.from('wc_nations').update({active_laws:active}).eq('id',mn.id);
@@ -1158,21 +1308,26 @@ window.toggleLaw=async function(key){
   else toast('Error: '+error.message);
 };
 
-// Weekly politician influence tick (runs on login + each tick)
+// Weekly cabinet tick — ideology directors shift party support
 function applyPoliticianInfluence(nat){
   const week=Math.floor(Date.now()/(7*24*3600000));
   const lastWeek=nat.last_pol_week||0;
-  if(week<=lastWeek)return nat; // already applied this week
-  const seed=(week*1000)+(parseInt(nat.id.replace(/-/g,'').slice(0,8),16)||0);
-  const pols=genPoliticians(nat.gov,seed);
-  const sup={...nat.party_support||{}};
-  pols.forEach(p=>{
+  if(week<=lastWeek)return nat;
+  const cabinet=getCurrentCabinet(nat);
+  const sup={...(nat.party_support||{})};
+  cabinet.forEach(p=>{
     if(!p||!p.ideology)return;
-    sup[p.ideology]=(sup[p.ideology]||0)+p.influence;
-    // Normalize: cap at 80, floor at 1
-    Object.keys(sup).forEach(k=>{sup[k]=Math.max(1,Math.min(80,sup[k]));});
-    // Drain other parties slightly
-    Object.keys(GOVS).forEach(k=>{if(k!==p.ideology)sup[k]=Math.max(1,(sup[k]||5)-1);});
+    const pos=POSITIONS[p.posKey];
+    if(pos) pos.apply(sup,p);
   });
-  return{...nat, party_support:sup, last_pol_week:week};
+  // Ideology directors specifically push their party
+  const idDir=cabinet.find(p=>p.posKey==='ideology_director');
+  if(idDir&&idDir.ideology){
+    sup[idDir.ideology]=(sup[idDir.ideology]||0)+idDir.influence;
+    Object.keys(GOVS).forEach(k=>{
+      sup[k]=Math.max(1,Math.min(80,sup[k]||5));
+      if(k!==idDir.ideology)sup[k]=Math.max(1,sup[k]-1);
+    });
+  }
+  return{...nat,party_support:sup,last_pol_week:week};
 }
